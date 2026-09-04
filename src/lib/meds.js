@@ -88,6 +88,72 @@ export const MED_KINDS = [
   { key: 'other', label: 'Other' },
 ];
 
+/**
+ * A blank medication, safe to hand to a form and edit.
+ *
+ * `{ ...DEFAULT_MED }` is a *shallow* copy: the new object's `schedule`,
+ * `supply` and `times[0]` are the module-level ones, shared by every medication
+ * created that way. Nothing mutates them today — the editors all replace rather
+ * than assign into — but one `med.supply.onHand = n` anywhere would silently
+ * rewrite the default for the rest of the session, and every med made after it.
+ * Cloning once, here, means that bug can't be written.
+ */
+export function newMed(over = {}) {
+  return {
+    ...DEFAULT_MED,
+    ...over,
+    schedule: {
+      ...DEFAULT_MED.schedule,
+      ...(over.schedule || {}),
+      times: (over.schedule?.times || DEFAULT_MED.schedule.times).map((t) => ({ ...t })),
+      days: [...(over.schedule?.days || DEFAULT_MED.schedule.days)],
+    },
+    supply: { ...DEFAULT_MED.supply, ...(over.supply || {}) },
+    rules: (over.rules || []).map((r) => ({ ...r })),
+  };
+}
+
+/**
+ * Where an nth dose starts out on the clock.
+ *
+ * These are starting positions for a picker, not advice: the same kind of
+ * default as `DEFAULT_TIME`'s own 08:00, chosen so that asking for three a day
+ * doesn't produce three rows stacked on the same minute. Every one of them is
+ * expected to be dragged to where the person actually takes it.
+ */
+const SPREAD = {
+  1: ['08:00'],
+  2: ['08:00', '14:00'],
+  3: ['08:00', '13:00', '18:00'],
+  4: ['08:00', '12:00', '16:00', '20:00'],
+};
+
+/**
+ * Grow or shrink a schedule to `count` doses a day.
+ *
+ * Times already on the schedule are kept exactly as they are — someone who set
+ * their morning to 07:15 and then adds an afternoon must not have the morning
+ * moved back to 08:00 under them. Only the rows being added are positioned, and
+ * shrinking drops from the end, which is the one the person just added.
+ */
+export function withDoseCount(schedule, count) {
+  const times = schedule?.times || [];
+  const n = Math.max(1, Math.min(4, Math.round(Number(count) || 1)));
+  if (n === times.length) return schedule;
+  if (n < times.length) return { ...schedule, times: times.slice(0, n) };
+
+  const spread = SPREAD[n] || SPREAD[4];
+  const grown = [...times];
+  for (let i = times.length; i < n; i += 1) {
+    grown.push({
+      ...DEFAULT_TIME,
+      id: `t${i + 1}-${Date.now().toString(36)}${i}`,
+      time: spread[i] || DEFAULT_TIME.time,
+    });
+  }
+  return { ...schedule, times: grown };
+}
+
 /** "2 tablets" / "1 capsule" / "5 mL" — an amount in the form's own words. */
 export function formatAmount(amount, form = 'tablet') {
   const n = positive(amount, 1);

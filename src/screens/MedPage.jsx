@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, X, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, X, Trash2, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
-  normalizeMed, supplyStatus, formatOffset, MED_KINDS, DEFAULT_MED,
+  normalizeMed, supplyStatus, formatOffset, MED_KINDS, newMed, withDoseCount,
   DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount,
 } from '../lib/meds.js';
 import { headingStyle, Segmented, SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
@@ -39,18 +39,54 @@ export default function MedPage() {
 // ── Adding ──────────────────────────────────────────────────────────────────
 
 function NewMed() {
-  const { addCrashMed } = useApp();
+  const { addCrashMed, crashMeds } = useApp();
   const navigate = useNavigate();
   const back = useBack('/meds');
-  const [draft, setDraft] = useState({ ...DEFAULT_MED, id: 'draft' });
+  // `newMed()` rather than a spread of DEFAULT_MED: the spread is shallow, and
+  // this draft's schedule and supply get edited in place by the form.
+  const [draft, setDraft] = useState(() => newMed({ id: 'draft' }));
+  const [justSaved, setJustSaved] = useState('');
 
   const named = String(draft.name || '').trim().length > 0;
 
+  const commit = () => {
+    const { id: _drop, ...rest } = draft;
+    return addCrashMed({ ...rest, name: rest.name.trim() });
+  };
+
   const save = () => {
     if (!named) return;
-    const { id: _drop, ...rest } = draft;
-    addCrashMed(rest);
+    commit();
     navigate('/meds', { replace: true });
+  };
+
+  // Setting up for the first time means typing in several at once, and going
+  // back out to the list and in again for each is most of the friction in it.
+  // This keeps the days and the dose count — almost always shared across a
+  // regimen — and clears the parts that never are.
+  const saveAndAnother = () => {
+    if (!named) return;
+    const saved = commit();
+    setJustSaved(saved.name);
+    setDraft(newMed({
+      id: 'draft',
+      schedule: {
+        days: [...draft.schedule.days],
+        // The clock positions carry — a second medication taken with the first
+        // is the common case. The amount does not: how many of *this* one to
+        // take has nothing to do with how many of the last one, and a number
+        // filled in on a medication's behalf is the one thing this app doesn't
+        // do. An offset row can't carry either, since it points at a med the
+        // new one may not follow.
+        times: draft.schedule.times.map((t) => ({
+          ...DEFAULT_TIME,
+          id: t.id,
+          time: t.mode === 'clock' ? t.time : DEFAULT_TIME.time,
+        })),
+      },
+      graceMinutes: draft.graceMinutes,
+    }));
+    window.scrollTo({ top: 0 });
   };
 
   return (
@@ -59,29 +95,56 @@ function NewMed() {
       title="Add a medication"
       onBack={back}
       set={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+      banner={justSaved ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem',
+          padding: '0.75rem 0.875rem', borderRadius: '0.75rem',
+          backgroundColor: 'var(--positive-soft)', border: '1px solid var(--positive)',
+        }}>
+          <Check size={15} style={{ color: 'var(--positive-text)', flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--positive-text)' }}>
+            {justSaved} saved. Here’s a blank one.
+          </span>
+        </div>
+      ) : null}
       footer={(
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+        <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={back}
+              style={{
+                flex: 1, padding: '0.875rem', borderRadius: '0.75rem', cursor: 'pointer',
+                backgroundColor: 'var(--surface2)', color: 'var(--text)',
+                border: '1px solid var(--border)', fontSize: '0.9375rem', fontWeight: 700,
+              }}
+            >
+              {crashMeds.length || justSaved ? 'Done' : 'Cancel'}
+            </button>
+            <button
+              onClick={save}
+              disabled={!named}
+              className="app-btn-primary"
+              style={{ flex: 2, opacity: named ? 1 : 0.5 }}
+            >
+              Save
+            </button>
+          </div>
           <button
-            onClick={back}
+            onClick={saveAndAnother}
+            disabled={!named}
             style={{
-              flex: 1, padding: '0.875rem', borderRadius: '0.75rem', cursor: 'pointer',
-              backgroundColor: 'var(--surface2)', color: 'var(--text)',
-              border: '1px solid var(--border)', fontSize: '0.9375rem', fontWeight: 700,
+              width: '100%', marginTop: '0.5rem', padding: '0.75rem', borderRadius: '0.75rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+              backgroundColor: 'transparent', border: 'none',
+              color: 'var(--accent-text)', fontSize: '0.875rem', fontWeight: 700,
+              cursor: named ? 'pointer' : 'default', opacity: named ? 1 : 0.4,
             }}
           >
-            Cancel
-          </button>
-          <button
-            onClick={save}
-            disabled={!named}
-            className="app-btn-primary"
-            style={{ flex: 2, opacity: named ? 1 : 0.5 }}
-          >
-            Save
+            <Plus size={15} /> Save and add another
           </button>
         </div>
       )}
-      hint={named ? null : 'Give it a name and you can save.'}
+      hint={named ? null : 'Give it a name and you can save. Nothing else here is required.'}
     />
   );
 }
@@ -183,7 +246,7 @@ function EditMed({ id }) {
 
 // ── The form itself ─────────────────────────────────────────────────────────
 
-function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenNotes }) {
+function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenNotes, banner }) {
   const { crashMeds } = useApp();
   const [advanced, setAdvanced] = useState(false);
 
@@ -216,6 +279,8 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
   return (
     <div className="app-page" style={pageStyle}>
       <ViewHeader title={title} onBack={onBack} />
+
+      {banner}
 
       {/* ── What it is ── */}
       <div style={{ marginBottom: '1.75rem' }}>
@@ -256,6 +321,21 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
       {/* ── When ── */}
       <div style={{ marginBottom: '1.75rem' }}>
         <h2 style={headingStyle}>WHEN</h2>
+
+        {/* How many times a day, before the times themselves.
+            This only adds and removes rows — it is the shape of the schedule,
+            not a suggestion about it, in the same way DEFAULT_TIME's 08:00 is a
+            place for the picker to start rather than a recommendation. Without
+            it, setting up a twice-daily medication means finding "Add another
+            time" underneath the first row, which is the step people miss and
+            then enter the same medication twice to work around. */}
+        <label className="app-label">How many times a day</label>
+        <Segmented
+          options={[1, 2, 3, 4].map((n) => ({ key: n, label: String(n) }))}
+          value={med.schedule.times.length}
+          onChange={(n) => set({ schedule: withDoseCount(med.schedule, n) })}
+          style={{ marginBottom: '0.875rem' }}
+        />
 
         <div style={{ display: 'grid', gap: '0.625rem' }}>
           {med.schedule.times.map((time, i) => (
@@ -303,19 +383,27 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
       {/* ── What's left ── */}
       <div style={{ marginBottom: '1.75rem' }}>
         <h2 style={headingStyle}>WHAT’S LEFT</h2>
+        {/* On hand gets the full width. Three number fields across a phone left
+            it about six characters wide, which truncated its own placeholder
+            to "Not cc" — and that placeholder is the only thing that says
+            leaving it empty means "not counting" rather than "none left". */}
+        <div style={{ marginBottom: '0.875rem' }}>
+          <label className="app-label">On hand</label>
+          <input
+            type="number" min="0" inputMode="numeric"
+            value={med.supply.onHand ?? ''}
+            onChange={(e) => setSupply({ onHand: numberOrBlank(e.target.value) })}
+            placeholder="Not counting"
+            className="app-input" style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginTop: '0.375rem' }}>
+            Optional. Left empty, Rx tracks the doses but not the bottle.
+          </p>
+        </div>
+
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.875rem' }}>
           <div style={{ flex: 1 }}>
-            <label className="app-label">On hand</label>
-            <input
-              type="number" min="0" inputMode="numeric"
-              value={med.supply.onHand ?? ''}
-              onChange={(e) => setSupply({ onHand: numberOrBlank(e.target.value) })}
-              placeholder="Not counting"
-              className="app-input" style={{ width: '100%' }}
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="app-label">Warn me under</label>
+            <label className="app-label">Warn under (days left)</label>
             <input
               type="number" min="0" step="1"
               value={med.supply.lowDays}

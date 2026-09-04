@@ -6,6 +6,7 @@ import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
 import { suggestedOnset, formatHours } from '../lib/window.js';
 import { pageStyle } from '../components/medsUi.jsx';
+import InstallCard from '../components/InstallCard.jsx';
 
 /**
  * The things you decide once, while you're fine, so none of them have to be
@@ -68,6 +69,10 @@ export default function SettingsView() {
         Your medications, doses, notes and history are yours. Nothing in Rx is
         shared with anyone.
       </p>
+
+      {/* Renders nothing once Rx is on a home screen, or in a browser that
+          can neither install it nor be told how. */}
+      <InstallCard variant="row" />
 
       <div style={section}>
         <h2 style={h2}>WHAT I’VE NOTICED</h2>

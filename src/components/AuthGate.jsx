@@ -3,17 +3,22 @@ import { useAuth } from '../context/AuthContext';
 import { AppProvider, useApp } from '../context/AppContext';
 import Login from './Login';
 
+// The ground each theme paints, matching --bg in index.css. Installed, this is
+// the colour the OS draws behind the status bar and around a rubber-band
+// scroll, so a stale value shows as a dark band above a light app.
+const THEME_COLOR = { dark: '#09090b', light: '#f9fafb' };
+
 function ThemeSync() {
   const { settings } = useApp();
   useEffect(() => {
     const html = document.documentElement;
-    if (settings.lightMode) {
-      html.classList.add('light');
-      html.classList.remove('dark');
-    } else {
-      html.classList.add('dark');
-      html.classList.remove('light');
-    }
+    const light = Boolean(settings.lightMode);
+    html.classList.toggle('light', light);
+    html.classList.toggle('dark', !light);
+    html.style.colorScheme = light ? 'light' : 'dark';
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', THEME_COLOR[light ? 'light' : 'dark']);
   }, [settings.lightMode]);
   return null;
 }

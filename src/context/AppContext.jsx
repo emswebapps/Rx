@@ -4,7 +4,7 @@ import { saveUserData, loadUserData, subscribeUserData, saveFCMToken } from '../
 import { generateId } from '../utils/id';
 import { createSession, defaultReleaseAt } from '../lib/protocol.js';
 import { pruneSessions } from '../lib/stats.js';
-import { normalizeMed, supplyAfterDose, DEFAULT_MED } from '../lib/meds.js';
+import { normalizeMed, supplyAfterDose, newMed } from '../lib/meds.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -322,7 +322,13 @@ export function AppProvider({ children, uid }) {
   // was added has none, and is treated as having always existed — the only
   // reading that doesn't wipe out history people already have.
   const addCrashMed = useCallback((med = {}) => {
-    const next = { ...DEFAULT_MED, createdAt: Date.now(), ...med, id: generateId() };
+    // `newMed()` rather than a spread of DEFAULT_MED. The spread is shallow, so
+    // a caller that passes no schedule or supply of its own — anything but the
+    // add form, today — would store a medication whose `schedule` *is* the
+    // module-level default object, shared with every other med made that way.
+    // It also detaches the stored med from the form's draft, which the editor
+    // goes on holding.
+    const next = newMed({ createdAt: Date.now(), ...med, id: generateId() });
     persist('crashMeds', [...stateRef.current.crashMeds, next]);
     return next;
   }, [persist]);

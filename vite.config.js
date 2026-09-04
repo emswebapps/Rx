@@ -26,8 +26,31 @@ export default defineConfig({
         // worker. Scoping the fallback keeps an offline launch inside Rx.
         navigateFallback: '/Rx/index.html',
         navigateFallbackDenylist: [/^\/ExpenseTracker\//],
+        // The Firebase messaging worker is a service worker of its own,
+        // registered separately at its own scope. Precaching it would hand
+        // Workbox's cache a second worker to serve stale copies of, which is
+        // exactly the file that must always come from the network.
+        globIgnores: ['**/firebase-messaging-sw.js'],
       },
-      includeAssets: ['icon-192.png', 'apple-touch.png'],
+      // Precached explicitly, because an installed app that is opened offline
+      // needs all of these and none of them is reachable from index.html's
+      // module graph:
+      //
+      //   manifest.webmanifest  — without it a cold offline launch has no name,
+      //                           no theme colour and no icons, and the browser
+      //                           can report the app as no longer installable.
+      //   the icons             — the 512s are what the install dialogue and
+      //                           the Android splash screen draw from; the
+      //                           maskable pair is what a launcher crops.
+      //   apple-touch.png       — iOS reads it at add-to-home-screen time.
+      includeAssets: [
+        'manifest.webmanifest',
+        'icon-192.png',
+        'icon-192-maskable.png',
+        'icon-512.png',
+        'icon-512-maskable.png',
+        'apple-touch.png',
+      ],
     }),
   ],
 });
