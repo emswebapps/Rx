@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      # The regimen maths is duplicated between the client and the Cloud
+      # Function on purpose (ESM vs CommonJS). Running both suites here is what
+      # stops a deploy shipping a client that disagrees with its own reminders.
+      - run: npm test
+      - run: npm --prefix functions install
+      - run: npm --prefix functions test
+
+      - run: npm run build
+        env:
+          # Web Push certificate public key from Firebase Console → Project
+          # Settings → Cloud Messaging. Without it the app still works, but
+          # background push is disabled.
+          VITE_FCM_VAPID_KEY: ${{ secrets.VITE_FCM_VAPID_KEY }}
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,25 @@
+name: Deploy Cloud Functions
+
+# Manual only. The finance app deploys its own functions to the same Firebase
+# project under the "default" codebase; this one owns "rx". Both are scoped so
+# neither can delete the other's.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm --prefix functions install
+      - run: npm --prefix functions test
+
+      - run: npm install -g firebase-tools
+      - run: firebase deploy --only functions:rx --project billtracker-256ef --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/key.json
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

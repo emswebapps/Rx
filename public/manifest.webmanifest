@@ -1,0 +1,40 @@
+{
+  "id": "/Rx/",
+  "name": "Rx",
+  "short_name": "Rx",
+  "description": "What you take, when you took it, and how much is left",
+  "start_url": "/Rx/",
+  "scope": "/Rx",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/Rx/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/Rx/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log a dose",
+      "short_name": "Log",
+      "description": "Open today's doses and tick one off",
+      "url": "/Rx/",
+      "icons": [{ "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "My medications",
+      "short_name": "Meds",
+      "description": "Add or edit what you take",
+      "url": "/Rx/meds",
+      "icons": [{ "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "I’m crashing",
+      "short_name": "Crash",
+      "description": "Start the crash protocol straight away",
+      "url": "/Rx/crash?start=1",
+      "icons": [{ "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

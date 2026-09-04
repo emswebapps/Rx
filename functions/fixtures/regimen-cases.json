@@ -1,0 +1,1875 @@
+{
+  "_comment": "Recorded answers shared by two implementations of the same regimen maths: src/lib/meds.js (ESM, client) and functions/regimen.js (CJS, scheduler). Both are asserted against this file, so changing one without the other goes red. Regenerate deliberately, never to make a red test green without reading why. All timestamps are epoch ms; `tz` is the zone the expectations were recorded in.",
+  "tz": "America/New_York",
+  "cases": [
+    {
+      "name": "nothing logged yet, mid-morning",
+      "now": 1788008400000,
+      "nowLocal": "2026-08-29, 09:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "skipped"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [
+          {
+            "medId": "xr",
+            "ruleId": "r-water",
+            "at": 1788004800000
+          }
+        ],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "long-acting taken, booster still ahead — window is provisional",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788037200000,
+          "end": 1788055200000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": true,
+          "pendingMedId": "ir",
+          "pendingExpectedAt": 1788026400000,
+          "wouldBecomeStart": 1788040800000,
+          "wouldBecomeEnd": 1788058800000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "booster due, inside its grace — still provisional",
+      "now": 1788027600000,
+      "nowLocal": "2026-08-29, 14:20",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "due"
+          }
+        ],
+        "window": {
+          "start": 1788037200000,
+          "end": 1788055200000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": true,
+          "pendingMedId": "ir",
+          "pendingExpectedAt": 1788026400000,
+          "wouldBecomeStart": 1788040800000,
+          "wouldBecomeEnd": 1788058800000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "booster grace has passed with nothing logged — window locks earlier",
+      "now": 1788030000000,
+      "nowLocal": "2026-08-29, 15:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "skipped"
+          }
+        ],
+        "window": {
+          "start": 1788037200000,
+          "end": 1788055200000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "booster taken — window moves later",
+      "now": 1788030000000,
+      "nowLocal": "2026-08-29, 15:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-ir",
+          "takenAt": 1788026400000,
+          "medId": "ir",
+          "status": "taken"
+        },
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "taken"
+          }
+        ],
+        "window": {
+          "start": 1788040800000,
+          "end": 1788058800000,
+          "doseId": "d-ir",
+          "medId": "ir",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "booster logged late, after the grace — window moves back out",
+      "now": 1788033600000,
+      "nowLocal": "2026-08-29, 16:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-ir",
+          "takenAt": 1788031800000,
+          "medId": "ir",
+          "status": "taken"
+        },
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "taken"
+          }
+        ],
+        "window": {
+          "start": 1788046200000,
+          "end": 1788064200000,
+          "doseId": "d-ir",
+          "medId": "ir",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [
+          {
+            "medId": "ir",
+            "ruleId": "r-nocoffee",
+            "at": 1788033600000
+          }
+        ],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "a late morning dose drags the offset booster late with it",
+      "now": 1788019200000,
+      "nowLocal": "2026-08-29, 12:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788013800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788035400000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788046200000,
+          "end": 1788064200000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": true,
+          "pendingMedId": "ir",
+          "pendingExpectedAt": 1788035400000,
+          "wouldBecomeStart": 1788049800000,
+          "wouldBecomeEnd": 1788067800000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "legacy dose with no medId falls back to the kit numbers",
+      "now": 1788019200000,
+      "nowLocal": "2026-08-29, 12:00",
+      "meds": [],
+      "doses": [
+        {
+          "id": "legacy",
+          "takenAt": 1788004800000
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [],
+        "window": {
+          "start": 1788019200000,
+          "end": 1788037200000,
+          "doseId": "legacy",
+          "medId": null,
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": []
+      }
+    },
+    {
+      "name": "a rule fires an hour before the dose",
+      "now": 1788001500000,
+      "nowLocal": "2026-08-29, 07:05",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788026400000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [
+          {
+            "medId": "xr",
+            "ruleId": "r-eat",
+            "at": 1788001200000
+          }
+        ],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "an eat-first rule stops being due once the dose is taken",
+      "now": 1788001500000,
+      "nowLocal": "2026-08-29, 07:05",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788001200000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788022800000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788033600000,
+          "end": 1788051600000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": true,
+          "pendingMedId": "ir",
+          "pendingExpectedAt": 1788022800000,
+          "wouldBecomeStart": 1788037200000,
+          "wouldBecomeEnd": 1788055200000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "an inactive med schedules nothing",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "xr",
+          "name": "Long-acting",
+          "strength": "20 mg",
+          "kind": "long",
+          "schedule": {
+            "mode": "clock",
+            "time": "08:00"
+          },
+          "graceMinutes": 45,
+          "onsetHours": 9,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 30,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [
+            {
+              "id": "r-eat",
+              "text": "Eat first",
+              "offsetMinutes": -60
+            },
+            {
+              "id": "r-water",
+              "text": "Water",
+              "offsetMinutes": 0
+            }
+          ],
+          "active": true
+        },
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": false
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-xr",
+          "takenAt": 1788004800000,
+          "medId": "xr",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "xr",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          }
+        ],
+        "window": {
+          "start": 1788037200000,
+          "end": 1788055200000,
+          "doseId": "d-xr",
+          "medId": "xr",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "xr",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 30,
+            "perDay": 1,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          },
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "an offset med whose anchor was deleted resolves to unknown",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "ir",
+          "name": "Booster",
+          "strength": "10 mg",
+          "kind": "booster",
+          "schedule": {
+            "mode": "offset",
+            "afterMedId": "xr",
+            "offsetHours": 6
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 5,
+          "supply": {
+            "onHand": 4,
+            "perDose": 1,
+            "lowDays": 7,
+            "refillFrom": "2026-09-04"
+          },
+          "rules": [
+            {
+              "id": "r-nocoffee",
+              "text": "No coffee after this",
+              "offsetMinutes": 120
+            }
+          ],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir",
+            "slotId": "t1",
+            "amount": 1,
+            "expectedAt": null,
+            "state": "unknown"
+          }
+        ],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir",
+            "tracked": true,
+            "dosesLeft": 4,
+            "daysLeft": 4,
+            "perDay": 1,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "a weekdays-only med schedules nothing on a Saturday",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "tw",
+          "name": "Twice daily",
+          "strength": "10 mg",
+          "kind": "other",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "am",
+                "mode": "clock",
+                "time": "07:00",
+                "amount": 1
+              },
+              {
+                "id": "pm",
+                "mode": "clock",
+                "time": "15:00",
+                "amount": 2
+              }
+            ],
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "graceMinutes": 30,
+          "onsetHours": 4,
+          "durationHours": 4,
+          "supply": {
+            "onHand": 30,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "tw",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 14,
+            "perDay": 2.142857142857143,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "a twice-daily med produces one row per time",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "tw",
+          "name": "Twice daily",
+          "strength": "10 mg",
+          "kind": "other",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "am",
+                "mode": "clock",
+                "time": "07:00",
+                "amount": 1
+              },
+              {
+                "id": "pm",
+                "mode": "clock",
+                "time": "15:00",
+                "amount": 2
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 30,
+          "onsetHours": 4,
+          "durationHours": 4,
+          "supply": {
+            "onHand": 30,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "tw",
+            "slotId": "am",
+            "amount": 1,
+            "expectedAt": 1788001200000,
+            "state": "skipped"
+          },
+          {
+            "medId": "tw",
+            "slotId": "pm",
+            "amount": 2,
+            "expectedAt": 1788030000000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "tw",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 10,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "the morning slot taken leaves the afternoon one still ahead",
+      "now": 1788012000000,
+      "nowLocal": "2026-08-29, 10:00",
+      "meds": [
+        {
+          "id": "tw",
+          "name": "Twice daily",
+          "strength": "10 mg",
+          "kind": "other",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "am",
+                "mode": "clock",
+                "time": "07:00",
+                "amount": 1
+              },
+              {
+                "id": "pm",
+                "mode": "clock",
+                "time": "15:00",
+                "amount": 2
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 30,
+          "onsetHours": 4,
+          "durationHours": 4,
+          "supply": {
+            "onHand": 30,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-am",
+          "takenAt": 1788001500000,
+          "medId": "tw",
+          "status": "taken",
+          "slotId": "am"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "tw",
+            "slotId": "am",
+            "amount": 1,
+            "expectedAt": 1788001200000,
+            "state": "taken"
+          },
+          {
+            "medId": "tw",
+            "slotId": "pm",
+            "amount": 2,
+            "expectedAt": 1788030000000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788015900000,
+          "end": 1788030300000,
+          "doseId": "d-am",
+          "medId": "tw",
+          "provisional": true,
+          "pendingMedId": "tw",
+          "pendingExpectedAt": 1788030000000,
+          "wouldBecomeStart": 1788044400000,
+          "wouldBecomeEnd": 1788058800000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "tw",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 10,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "a dose skipped on purpose is neither taken nor missed",
+      "now": 1788033600000,
+      "nowLocal": "2026-08-29, 16:00",
+      "meds": [
+        {
+          "id": "tw",
+          "name": "Twice daily",
+          "strength": "10 mg",
+          "kind": "other",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "am",
+                "mode": "clock",
+                "time": "07:00",
+                "amount": 1
+              },
+              {
+                "id": "pm",
+                "mode": "clock",
+                "time": "15:00",
+                "amount": 2
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 30,
+          "onsetHours": 4,
+          "durationHours": 4,
+          "supply": {
+            "onHand": 30,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-am",
+          "takenAt": 1788001500000,
+          "medId": "tw",
+          "status": "taken",
+          "slotId": "am"
+        },
+        {
+          "id": "d-pm",
+          "takenAt": 1788030120000,
+          "medId": "tw",
+          "status": "skipped",
+          "slotId": "pm"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "tw",
+            "slotId": "am",
+            "amount": 1,
+            "expectedAt": 1788001200000,
+            "state": "taken"
+          },
+          {
+            "medId": "tw",
+            "slotId": "pm",
+            "amount": 2,
+            "expectedAt": 1788030000000,
+            "state": "skipped-on-purpose"
+          }
+        ],
+        "window": {
+          "start": 1788015900000,
+          "end": 1788030300000,
+          "doseId": "d-am",
+          "medId": "tw",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "tw",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 10,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "an unslotted dose is filed against the nearest time, not the first",
+      "now": 1788033600000,
+      "nowLocal": "2026-08-29, 16:00",
+      "meds": [
+        {
+          "id": "tw",
+          "name": "Twice daily",
+          "strength": "10 mg",
+          "kind": "other",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "am",
+                "mode": "clock",
+                "time": "07:00",
+                "amount": 1
+              },
+              {
+                "id": "pm",
+                "mode": "clock",
+                "time": "15:00",
+                "amount": 2
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 30,
+          "onsetHours": 4,
+          "durationHours": 4,
+          "supply": {
+            "onHand": 30,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d-x",
+          "takenAt": 1788029400000,
+          "medId": "tw",
+          "status": "taken"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "tw",
+            "slotId": "am",
+            "amount": 1,
+            "expectedAt": 1788001200000,
+            "state": "skipped"
+          },
+          {
+            "medId": "tw",
+            "slotId": "pm",
+            "amount": 2,
+            "expectedAt": 1788030000000,
+            "state": "taken"
+          }
+        ],
+        "window": {
+          "start": 1788043800000,
+          "end": 1788058200000,
+          "doseId": "d-x",
+          "medId": "tw",
+          "provisional": false,
+          "pendingMedId": null,
+          "pendingExpectedAt": null,
+          "wouldBecomeStart": null,
+          "wouldBecomeEnd": null
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "tw",
+            "tracked": true,
+            "dosesLeft": 30,
+            "daysLeft": 10,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null
+          }
+        ]
+      }
+    }
+  ]
+}
