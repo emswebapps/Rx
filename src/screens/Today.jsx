@@ -11,6 +11,7 @@ import { formatClock, formatDayLong } from '../lib/time.js';
 import ScheduleRow, { TimeEditor } from '../components/ScheduleRow.jsx';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
+import InstallCard from '../components/InstallCard.jsx';
 import { pageStyle } from '../components/medsUi.jsx';
 
 /**
@@ -114,6 +115,13 @@ export default function RxHome() {
           <PlainDoses doses={crashDoses} now={now} onEdit={setEditingDose} />
         </>
       ))}
+
+      {/* ── On a home screen, or not yet ──
+          Below the doses, because nothing outranks what's due this morning —
+          but above everything else, because until Rx is installed its dose
+          reminders cannot reach a lock screen at all on iOS, and a tracker
+          that quietly never buzzes is the failure mode worth interrupting for. */}
+      <InstallCard />
 
       {/* ── Needs sorting ── */}
       {needsAttention.length > 0 && (

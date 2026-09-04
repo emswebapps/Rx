@@ -12,7 +12,8 @@ import {
   normalizeMed, activeMeds, atClock, parseISODate, takenDoses,
   expectedDosesToday, nextExpected, effectiveWindow, ruleMoments, dueRules,
   supplyStatus, supplyAfterDose, formatOffset, rulesForMed,
-  DEFAULT_GRACE_MINUTES,
+  newMed, withDoseCount,
+  DEFAULT_GRACE_MINUTES, DEFAULT_MED,
 } from './meds.js';
 
 const H = 60 * 60 * 1000;
@@ -295,4 +296,61 @@ test('logging a dose counts one out of the supply, and never past zero', () => {
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: 10, perDose: 2 } })).onHand, 8);
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: 1, perDose: 2 } })).onHand, 0);
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: null } })), null, 'nothing to count');
+});
+
+// ── Starting a new one ──────────────────────────────────────────────────────
+
+test('a new medication does not share its schedule with the defaults', () => {
+  const a = newMed();
+  const b = newMed();
+  assert.notEqual(a.schedule, DEFAULT_MED.schedule);
+  assert.notEqual(a.schedule.times[0], DEFAULT_MED.schedule.times[0]);
+  assert.notEqual(a.supply, b.supply);
+  assert.notEqual(a.schedule.days, b.schedule.days);
+
+  a.supply.onHand = 30;
+  a.schedule.times[0].time = '06:00';
+  assert.equal(DEFAULT_MED.supply.onHand, null);
+  assert.equal(newMed().schedule.times[0].time, '08:00');
+});
+
+test('a new medication still takes overrides', () => {
+  const m = newMed({ name: 'x', schedule: { days: [1, 2, 3] } });
+  assert.equal(m.name, 'x');
+  assert.deepEqual(m.schedule.days, [1, 2, 3]);
+  assert.equal(m.schedule.times.length, 1, 'unspecified parts still come from the defaults');
+});
+
+test('asking for more doses a day adds rows without moving the ones already set', () => {
+  const one = newMed().schedule;
+  one.times[0].time = '07:15';
+  const three = withDoseCount(one, 3);
+  assert.equal(three.times.length, 3);
+  assert.equal(three.times[0].time, '07:15', 'the morning stays where it was put');
+  assert.equal(three.times[1].time, '13:00');
+  assert.equal(three.times[2].time, '18:00');
+  assert.equal(new Set(three.times.map((t) => t.id)).size, 3, 'ids stay unique');
+});
+
+test('asking for fewer drops from the end and never reaches zero', () => {
+  const three = withDoseCount(newMed().schedule, 3);
+  assert.equal(withDoseCount(three, 1).times.length, 1);
+  assert.equal(withDoseCount(three, 1).times[0].id, three.times[0].id);
+  assert.equal(withDoseCount(three, 0).times.length, 1, 'a med due never is an archive, not a schedule');
+  assert.equal(withDoseCount(three, -5).times.length, 1);
+});
+
+test('the dose count is capped rather than producing an unusable form', () => {
+  assert.equal(withDoseCount(newMed().schedule, 99).times.length, 4);
+});
+
+test('asking for the count it already has changes nothing', () => {
+  const s = newMed().schedule;
+  assert.equal(withDoseCount(s, 1), s);
+});
+
+test('a schedule grown to more doses is still a schedule the app can read', () => {
+  const m = normalizeMed(newMed({ schedule: withDoseCount(newMed().schedule, 2) }));
+  assert.equal(m.schedule.times.length, 2);
+  assert.ok(m.schedule.times.every((t) => t.mode === 'clock' && t.amount === 1));
 });

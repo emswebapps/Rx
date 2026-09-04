@@ -1,20 +1,48 @@
 {
   "id": "/Rx/",
-  "name": "Rx",
+  "name": "Rx — medication tracker",
   "short_name": "Rx",
-  "description": "What you take, when you took it, and how much is left",
+  "description": "What you take, when you took it, and how much is left.",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["health", "medical", "lifestyle"],
   "start_url": "/Rx/",
-  "scope": "/Rx",
+  "scope": "/Rx/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "icons": [
     { "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/Rx/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/Rx/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/Rx/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "screenshots": [
+    {
+      "src": "/Rx/screenshot-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Today — every dose due, one tap to log or skip"
+    },
+    {
+      "src": "/Rx/screenshot-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Rx — what you take, when you took it, and how much is left"
+    }
+  ],
   "shortcuts": [
+    {
+      "name": "Add a medication",
+      "short_name": "Add",
+      "description": "Set up something new to take",
+      "url": "/Rx/meds/new",
+      "icons": [{ "src": "/Rx/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
     {
       "name": "Log a dose",
       "short_name": "Log",
