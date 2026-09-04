@@ -60,6 +60,7 @@ export function AppProvider({ children, uid }) {
   const [crashDoses, setDoses] = useState(() => storage.getDoses());
   const [crashMeds, setMeds] = useState(() => storage.getMeds());
   const [crashBehaviors, setBehaviors] = useState(() => storage.getBehaviors());
+  const [rxNotes, setNotes] = useState(() => storage.getNotes());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -68,7 +69,7 @@ export function AppProvider({ children, uid }) {
   const stateRef = useRef({});
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
-    crashKit, crashDoses, crashMeds, crashBehaviors,
+    crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
   };
 
   const setters = useRef({
@@ -81,6 +82,7 @@ export function AppProvider({ children, uid }) {
     crashDoses: setDoses,
     crashMeds: setMeds,
     crashBehaviors: setBehaviors,
+    rxNotes: setNotes,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -141,6 +143,7 @@ export function AppProvider({ children, uid }) {
       crashAnchors: st.crashAnchors,
       crashDoses: st.crashDoses,
       crashBehaviors: st.crashBehaviors,
+      rxNotes: st.rxNotes,
     });
   }, [uid]);
 
@@ -362,6 +365,35 @@ export function AppProvider({ children, uid }) {
     persist('crashMeds', st.crashMeds.map((m) => (m.id === medId ? { ...m, supply } : m)));
   }, [persist]);
 
+  // ── What I've noticed ───────────────────────────────────────────────────
+  // Free text about how a medication actually behaves. Kept out of the crash
+  // slices deliberately: these are not crisis records, they are the standing
+  // knowledge the crisis records are read against.
+
+  const addRxNote = useCallback((note = {}) => {
+    const next = {
+      ...note, id: generateId(), createdAt: Date.now(), updatedAt: Date.now(),
+    };
+    persist('rxNotes', [next, ...stateRef.current.rxNotes]);
+    return next;
+  }, [persist]);
+
+  const updateRxNote = useCallback((id, patch) => {
+    persist('rxNotes', stateRef.current.rxNotes.map(
+      (n) => (n.id === id ? { ...n, ...patch, updatedAt: Date.now() } : n),
+    ));
+  }, [persist]);
+
+  const deleteRxNote = useCallback((id) => {
+    persist('rxNotes', stateRef.current.rxNotes.filter((n) => n.id !== id));
+  }, [persist]);
+
+  const toggleRxNotePin = useCallback((id) => {
+    persist('rxNotes', stateRef.current.rxNotes.map(
+      (n) => (n.id === id ? { ...n, pinned: !n.pinned, updatedAt: Date.now() } : n),
+    ));
+  }, [persist]);
+
   // ── Warning-sign check-ins ──────────────────────────────────────────────
 
   const addCrashBehavior = useCallback((signIds, at = Date.now()) => {
@@ -388,6 +420,7 @@ export function AppProvider({ children, uid }) {
       crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose,
       crashMeds, addCrashMed, updateCrashMed, deleteCrashMed, refillCrashMed,
       crashBehaviors, addCrashBehavior, deleteCrashBehavior,
+      rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}
     </AppContext.Provider>

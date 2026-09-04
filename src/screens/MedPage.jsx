@@ -8,6 +8,7 @@ import {
 } from '../lib/meds.js';
 import { headingStyle, Segmented, SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
+import { notesForMed, preview } from '../lib/notes.js';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
 
@@ -88,7 +89,7 @@ function NewMed() {
 // ── Editing ─────────────────────────────────────────────────────────────────
 
 function EditMed({ id }) {
-  const { crashMeds, updateCrashMed, deleteCrashMed, refillCrashMed } = useApp();
+  const { crashMeds, updateCrashMed, deleteCrashMed, refillCrashMed, rxNotes } = useApp();
   const navigate = useNavigate();
   const back = useBack('/meds');
   const raw = crashMeds.find((m) => m.id === id);
@@ -119,6 +120,8 @@ function EditMed({ id }) {
         onChange: setRefilling,
         onSubmit: () => { refillCrashMed(med.id, Number(refilling)); setRefilling(''); },
       }}
+      notes={notesForMed(rxNotes, med.id)}
+      onOpenNotes={() => navigate('/notes')}
       footer={(
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', marginTop: '1.5rem' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '1rem' }}>
@@ -180,7 +183,7 @@ function EditMed({ id }) {
 
 // ── The form itself ─────────────────────────────────────────────────────────
 
-function MedForm({ med, title, onBack, set, footer, refill, hint }) {
+function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenNotes }) {
   const { crashMeds } = useApp();
   const [advanced, setAdvanced] = useState(false);
 
@@ -353,6 +356,27 @@ function MedForm({ med, title, onBack, set, footer, refill, hint }) {
           </div>
         )}
       </div>
+
+      {/* ── What I've noticed about this one ── */}
+      {notes && notes.length > 0 && (
+        <div style={{ marginBottom: '1.75rem' }}>
+          <h2 style={headingStyle}>WHAT I’VE NOTICED</h2>
+          <div style={{ display: 'grid', gap: '0.5rem' }}>
+            {notes.map((n) => (
+              <button
+                key={n.id}
+                onClick={onOpenNotes}
+                className="app-card"
+                style={{ padding: '0.875rem', textAlign: 'left', cursor: 'pointer', width: '100%' }}
+              >
+                <p style={{ fontSize: '0.875rem', color: 'var(--text)', lineHeight: 1.55 }}>
+                  {preview(n.text, 160)}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Advanced ── */}
       <button

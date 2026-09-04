@@ -19,6 +19,10 @@ const KEYS = {
   DOSES: 'bt_crash_doses',
   MEDS: 'bt_crash_meds',
   BEHAVIORS: 'bt_crash_behaviors',
+  // A new slice, so it gets a clean name rather than inheriting the `bt_crash_`
+  // prefix the others are stuck with. Nothing is written under it yet, so there
+  // is no live data to strand.
+  NOTES: 'rx_notes',
 };
 
 function get(key) {
@@ -82,6 +86,8 @@ export const storage = {
   setMeds: (v) => set(KEYS.MEDS, v),
   getBehaviors: () => get(KEYS.BEHAVIORS) || [],
   setBehaviors: (v) => set(KEYS.BEHAVIORS, v),
+  getNotes: () => get(KEYS.NOTES) || [],
+  setNotes: (v) => set(KEYS.NOTES, v),
 };
 
 // The Firestore field names, which are also the localStorage slices. One list,
@@ -96,4 +102,5 @@ export const CLOUD_FIELDS = {
   crashDoses: [storage.getDoses, storage.setDoses],
   crashMeds: [storage.getMeds, storage.setMeds],
   crashBehaviors: [storage.getBehaviors, storage.setBehaviors],
+  rxNotes: [storage.getNotes, storage.setNotes],
 };

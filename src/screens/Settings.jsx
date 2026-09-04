@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, X, Share2, Copy, Check, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, X, Share2, Copy, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
@@ -20,6 +21,7 @@ export default function SettingsView() {
     crashSessions, crashDoses,
   } = useApp();
   const kit = mergeKit(crashKit);
+  const navigate = useNavigate();
   const [newSign, setNewSign] = useState('');
   const partnerName = kit.partnerName || settings.spouseName || '';
   const inferred = suggestedOnset(crashSessions, crashDoses);
@@ -66,6 +68,26 @@ export default function SettingsView() {
         Your medications, doses, notes and history are yours. Nothing in Rx is
         shared with anyone.
       </p>
+
+      <div style={section}>
+        <h2 style={h2}>WHAT I’VE NOTICED</h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', lineHeight: 1.5, marginBottom: '0.875rem' }}>
+          How your medications actually behave, in your own words. Pinned notes
+          show up on the crash screen.
+        </p>
+        <button
+          onClick={() => navigate('/notes')}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0.875rem 1rem', borderRadius: '0.875rem', cursor: 'pointer',
+            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '0.875rem', fontWeight: 600,
+          }}
+        >
+          <span>Open my notes</span>
+          <ChevronRight size={16} style={{ color: 'var(--subtle)' }} />
+        </button>
+      </div>
 
       <div style={section}>
         <h2 style={h2}>THE BASICS</h2>

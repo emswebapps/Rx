@@ -65,6 +65,28 @@ says so plainly rather than implying more precision than exists. A medication
 carries `createdAt` and `archivedAt` so the weeks before it existed, or after it
 stopped, are excluded rather than counted as clean.
 
+### What I've noticed
+
+The dose log records what happened. It had nowhere to keep the other half — how
+a medication actually behaves, what it feels like as it wears off, what has to
+happen alongside it for it to work, and which decisions made in that state
+turned out badly.
+
+That knowledge doesn't fit anywhere else in the model: warning signs are short
+tags from a list, per-dose rules are one-liners pinned to a clock, and anchors
+are framed for reading mid-crisis. None of them is a place to write a paragraph
+and come back to it in six months, and a paragraph is the honest shape of most
+of what a person learns about their own medication.
+
+Notes are dated, can be tied to a medication (where they show on that
+medication's page), and can be **pinned**. A pinned note appears on the crash
+screen directly under the button — the moment it is least likely to be
+remembered and most likely to matter.
+
+Nothing here is generated and nothing is advice. Every word is typed by the
+person reading it; the app holds it, dates it, and puts it where it will be
+seen.
+
 ### The crash protocol
 
 A step-by-step tool for the hours after stimulant medication wears off, when
@@ -101,6 +123,7 @@ src/
                 window.js     when the evening gets hard
                 protocol.js   the crash session state machine
                 stats.js      crash session history
+                notes.js      free-text observations, pinning, filtering
   screens/      one file per page, plus screens/crash/ for the protocol
   components/   shared UI
   context/      auth, and the single app-state provider

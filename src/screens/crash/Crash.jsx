@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Feather, Images, TrendingDown, Inbox, Activity } from 'lucide-react';
+import { Feather, Images, TrendingDown, Inbox, Activity, NotebookPen } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCountdown } from '../../lib/useCountdown.js';
 import { timerRemaining, formatRemaining, isReleased } from '../../lib/protocol.js';
 import { useBack } from '../../lib/useBack.js';
 import { ViewHeader, pageStyle } from '../../components/medsUi.jsx';
+import { pinnedNotes } from '../../lib/notes.js';
 import QuietRow from '../../components/QuietRow.jsx';
 import ParkThought from './ParkThought.jsx';
 import BehaviorCheck from './BehaviorCheck.jsx';
@@ -22,7 +23,7 @@ import BehaviorCheck from './BehaviorCheck.jsx';
  * deliberately not repeated: going back is one tap.
  */
 export default function CrashScreen({ active }) {
-  const { crashDrafts, crashAnchors, crashSessions, startCrashSession } = useApp();
+  const { crashDrafts, crashAnchors, crashSessions, rxNotes, startCrashSession } = useApp();
   const navigate = useNavigate();
   const back = useBack('/');
   const now = useCountdown(active?.timerEndsAt);
@@ -33,6 +34,7 @@ export default function CrashScreen({ active }) {
   const held = crashDrafts.filter((d) => d.status === 'held');
   const ready = held.filter((d) => isReleased(d, now));
   const done = crashSessions.filter((s) => s.endedAt).length;
+  const pinned = pinnedNotes(rxNotes);
 
   const start = () => { startCrashSession(); navigate('/crash/run'); };
 
@@ -81,8 +83,35 @@ export default function CrashScreen({ active }) {
         </button>
       )}
 
+      {/* What you already worked out, before this. Above the menu rather than
+          behind a tap: the state this screen is opened in is exactly the one
+          that won't go looking for it. */}
+      {pinned.length > 0 && (
+        <div style={{ marginTop: '1.25rem', display: 'grid', gap: '0.5rem' }}>
+          {pinned.map((n) => (
+            <div
+              key={n.id}
+              className="app-card"
+              style={{ padding: '1rem', border: '1px solid var(--accent)' }}
+            >
+              <p style={{
+                fontSize: '0.9375rem', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap',
+              }}>
+                {n.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: 'grid', gap: '0.5rem', marginTop: '1.25rem' }}>
         <QuietRow Icon={Feather} label="Just get the thought out" onClick={() => setParking(true)} />
+        <QuietRow
+          Icon={NotebookPen}
+          label="What I’ve noticed"
+          detail={rxNotes.length || null}
+          onClick={() => navigate('/notes')}
+        />
         <QuietRow Icon={Activity} label="How am I doing?" onClick={() => setChecking(true)} />
         <QuietRow
           Icon={Images}

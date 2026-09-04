@@ -13,6 +13,7 @@ import MedPage from './MedPage.jsx';
 import SupplyView from './Supply.jsx';
 import HistoryView from './History.jsx';
 import SettingsView from './Settings.jsx';
+import Notebook from './Notebook.jsx';
 import CrashScreen from './crash/Crash.jsx';
 import ProtocolRunner from './crash/ProtocolRunner.jsx';
 import AnchorsView from './crash/AnchorsView.jsx';
@@ -74,6 +75,7 @@ export default function RxApp() {
         <Route path="/meds/:id" element={<MedPage />} />
         <Route path="/supply" element={<SupplyView />} />
         <Route path="/history" element={<HistoryView />} />
+        <Route path="/notes" element={<Notebook />} />
         <Route path="/setup" element={<SettingsView />} />
         <Route path="/anchors" element={<AnchorsView onBack={back} />} />
         <Route path="/held" element={<DraftsView onBack={back} />} />
