@@ -12,10 +12,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Rx" />
-    <!-- The starting value only. Rx's light mode is a setting rather than a
+    <!-- The dark ground, which is `--bg` in index.css and what the app paints
+         before React has mounted. The manifest's theme_color and
+         background_color are the same value, so an installed launch goes
+         splash → first paint without a colour changing underneath it.
+         The starting value only: Rx's light mode is a setting rather than a
          media query, so `ThemeSync` rewrites this to match once it knows which
          one is on — otherwise a light-mode app keeps a dark status bar. -->
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#09090b" />
     <title>Rx</title>
   </head>
   <body>
