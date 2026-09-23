@@ -11,7 +11,7 @@ import assert from 'node:assert';
 import {
   normalizeMed, activeMeds, atClock, parseISODate, takenDoses,
   expectedDosesToday, nextExpected, effectiveWindow, ruleMoments, dueRules,
-  supplyStatus, supplyAfterDose, formatOffset, rulesForMed,
+  supplyStatus, supplyAfterDose, supplyAfterUndo, formatOffset, rulesForMed,
   newMed, withDoseCount,
   DEFAULT_GRACE_MINUTES, DEFAULT_MED,
 } from './meds.js';
@@ -296,6 +296,13 @@ test('logging a dose counts one out of the supply, and never past zero', () => {
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: 10, perDose: 2 } })).onHand, 8);
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: 1, perDose: 2 } })).onHand, 0);
   assert.strictEqual(supplyAfterDose(med({ supply: { onHand: null } })), null, 'nothing to count');
+});
+
+test('undoing a dose puts exactly what it took back into the supply', () => {
+  const m = med({ supply: { onHand: 10, perDose: 2 } });
+  assert.strictEqual(supplyAfterUndo(m, 2).onHand, 12);
+  assert.strictEqual(supplyAfterUndo({ ...m, supply: supplyAfterDose(m, 2) }, 2).onHand, 10, 'a round trip');
+  assert.strictEqual(supplyAfterUndo(med({ supply: { onHand: null } }), 1), null, 'nothing to count');
 });
 
 // ── Starting a new one ──────────────────────────────────────────────────────

@@ -671,3 +671,16 @@ export function supplyAfterDose(med, amount) {
   const units = positive(amount, positive(m.schedule.times[0]?.amount, 1));
   return { ...m.supply, onHand: Math.max(0, onHand - units) };
 }
+
+/**
+ * The supply after a logged dose is taken back, or null when nothing is being
+ * counted — the inverse of `supplyAfterDose`, so an accidental "Take" undone a
+ * second later leaves the pill count exactly where it was.
+ */
+export function supplyAfterUndo(med, amount) {
+  const m = normalizeMed(med);
+  const onHand = countOrNull(m.supply.onHand);
+  if (onHand == null) return null;
+  const units = positive(amount, positive(m.schedule.times[0]?.amount, 1));
+  return { ...m.supply, onHand: onHand + units };
+}

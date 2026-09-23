@@ -1,138 +1,218 @@
 import { useState } from 'react';
-import { Check, Clock, AlertTriangle, Ban } from 'lucide-react';
+import { Check, Clock, AlertTriangle, X, SkipForward, Info, Undo2 } from 'lucide-react';
 import Modal from './Modal';
+import Sheet from './Sheet';
 import { formatClock } from '../lib/time.js';
 import { rulesForMed, supplyStatus, formatOffset, formatAmount } from '../lib/meds.js';
 
 /**
- * One medication's row on Today.
+ * One dose on Today: a pill, a name, and how much to take.
  *
- * This is the thing the app is for. It says what it is, whether it's been
- * taken, and gives you one button to say that it has — and it does that
- * without a chart, a modal or a second tap.
- *
- * Lifted out of DoseRow.jsx, where it was a helper inside a card that led with
- * the crash window. The row is the point now; the window is context underneath.
+ * The card itself is the button. Tapping it opens the sheet with Take and Skip,
+ * which keeps the list calm enough to read at a glance — the time headings and
+ * the pill's badge already say what's done and what isn't.
  */
 
-const ROW_STATE = {
-  taken: { color: 'var(--positive-text)', action: null },
-  due: { color: 'var(--accent-text)', action: 'Log' },
-  upcoming: { color: 'var(--subtle)', action: 'Log' },
-  skipped: { color: 'var(--muted)', action: 'Log' },
-  'skipped-on-purpose': { color: 'var(--muted)', action: null },
-  unknown: { color: 'var(--muted)', action: 'Log' },
+/** "20 mg, take 1 tablet" — the whole instruction on one line. */
+export function doseInstruction(med, amount) {
+  const take = `take ${formatAmount(amount, med.form)}`;
+  return med.strength ? `${med.strength}, ${take}` : take.charAt(0).toUpperCase() + take.slice(1);
+}
+
+const STATUS = {
+  taken: { color: 'var(--positive-text)' },
+  due: { color: 'var(--accent-text)', text: 'Due now' },
+  skipped: { color: 'var(--danger)', text: 'Missed' },
+  'skipped-on-purpose': { color: 'var(--muted)', text: 'Skipped' },
+  unknown: { color: 'var(--muted)', text: 'No time set' },
+  upcoming: { color: 'var(--subtle)', text: null },
 };
 
-export default function ScheduleRow({ entry, onLog, onSkip, onEdit, now = Date.now() }) {
-  const { med, state, expectedAt, dose, amount } = entry;
-  const tone = ROW_STATE[state] || ROW_STATE.unknown;
-  const rules = rulesForMed(med);
-  const supply = supplyStatus(med, now);
-  // The rules only matter up to the moment it's swallowed.
-  const showRules = state !== 'taken' && rules.length > 0;
+function statusText(entry) {
+  if (entry.state === 'taken' && entry.dose) return `Taken at ${formatClock(entry.dose.takenAt)}`;
+  return STATUS[entry.state]?.text ?? null;
+}
+
+/** A round tablet with a score line, badged with how the dose went. */
+export function PillIcon({ state, size = 44 }) {
+  const badge = state === 'taken' ? { bg: 'var(--positive)', Icon: Check }
+    : state === 'skipped' ? { bg: 'var(--danger)', Icon: X }
+    : state === 'skipped-on-purpose' ? { bg: 'var(--subtle)', Icon: SkipForward }
+    : null;
+  const faded = state === 'skipped-on-purpose';
 
   return (
-    <div className="app-card" style={{
-      padding: '1rem',
-      border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--border)'}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* The name gets the line to itself. Sharing it with the strength
-              wrapped "Methylphenidate · 10 mg" mid-unit on a narrow phone,
-              which is the one place a dose row must never be ambiguous. */}
-          <p style={{
-            fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {med.name || 'Untitled'}
-          </p>
-          <button
-            onClick={() => onEdit && onEdit(med.id)}
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: '0.8125rem', fontWeight: 600, color: tone.color, textAlign: 'left',
-              lineHeight: 1.35,
-            }}
-          >
-            {/* Amount first: on a row with two buttons this is the line with
-                room, and "2 tablets at 1:00 PM" is the whole instruction. */}
-            {[med.strength, formatAmount(amount, med.form)].filter(Boolean).join(' · ')}
-            {' · '}
-            {state === 'taken' && dose ? `taken ${formatClock(dose.takenAt)}`
-              : state === 'due' ? `due now${expectedAt != null ? `, ${formatClock(expectedAt)}` : ''}`
-              : state === 'skipped-on-purpose' ? `skipped, was ${formatClock(expectedAt)}`
-              : state === 'skipped' ? `not logged, was ${formatClock(expectedAt)}`
-              : state === 'unknown' ? 'no time set'
-              : formatClock(expectedAt)}
-          </button>
-        </div>
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox="0 0 44 44" aria-hidden="true" style={{ opacity: faded ? 0.45 : 1 }}>
+        <circle cx="22" cy="23.5" r="17" fill="rgba(0,0,0,0.25)" />
+        <circle cx="22" cy="22" r="17" fill="var(--pill)" />
+        <line x1="14" y1="30" x2="30" y2="14" stroke="rgba(0,0,0,0.18)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      {badge && (
+        <span style={{
+          position: 'absolute', right: -3, bottom: -3,
+          width: size * 0.42, height: size * 0.42, borderRadius: '9999px',
+          backgroundColor: badge.bg, border: '2px solid var(--surface)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+        }}>
+          <badge.Icon size={size * 0.24} strokeWidth={3} />
+        </span>
+      )}
+    </div>
+  );
+}
 
-        {state === 'taken' ? (
-          <Check size={19} style={{ color: 'var(--positive)', flexShrink: 0 }} />
-        ) : state === 'skipped-on-purpose' ? (
-          <Ban size={17} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-        ) : (
-          <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-            {/* Skipping on purpose has to be as easy as taking, or the only way
-                to keep an honest record is to lie about having taken it. */}
-            {onSkip && (
-              <button
-                onClick={() => onSkip(entry)}
-                aria-label={`Skip ${med.name || 'this dose'}`}
-                style={{
-                  padding: '0.4375rem 0.625rem', borderRadius: '0.625rem', cursor: 'pointer',
-                  backgroundColor: 'transparent', border: '1px solid var(--border)',
-                  color: 'var(--muted)', fontSize: '0.8125rem', fontWeight: 700,
-                }}
-              >
-                Skip
-              </button>
-            )}
-            <button
-              onClick={() => onLog(entry)}
-              style={{
-                padding: '0.4375rem 0.875rem', borderRadius: '0.625rem', cursor: 'pointer',
-                backgroundColor: state === 'due' ? 'var(--accent)' : 'var(--surface2)',
-                border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--border)'}`,
-                color: state === 'due' ? '#fff' : 'var(--text)',
-                fontSize: '0.8125rem', fontWeight: 700,
-              }}
-            >
-              {tone.action}
-            </button>
-          </div>
+export default function ScheduleRow({ entry, onOpen, now = Date.now() }) {
+  const { med, state, amount } = entry;
+  const supply = supplyStatus(med, now);
+  const status = statusText(entry);
+  const tone = STATUS[state] || STATUS.unknown;
+
+  return (
+    <button
+      onClick={() => onOpen(entry)}
+      aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
+      style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '1rem',
+        padding: '1.125rem 1.25rem', borderRadius: '1rem',
+        backgroundColor: 'var(--surface)',
+        border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--surface)'}`,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <PillIcon state={state} />
+      <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.25rem 0' }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: '1.1875rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
+        }}>
+          {med.name || 'Untitled'}
+        </p>
+        <p style={{ fontSize: '1rem', color: 'var(--subtle)', marginTop: '0.25rem', lineHeight: 1.35 }}>
+          {doseInstruction(med, amount)}
+        </p>
+        {status && (
+          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: tone.color, marginTop: '0.25rem' }}>
+            {status}
+          </p>
+        )}
+        {supply.low && supply.tracked && state !== 'taken' && (
+          <p style={{
+            display: 'flex', alignItems: 'center', gap: '0.3125rem', marginTop: '0.375rem',
+            fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600,
+          }}>
+            <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+            {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
+            {supply.refillOpen ? ' — refill now' : ''}
+          </p>
         )}
       </div>
+    </button>
+  );
+}
 
-      {supply.low && supply.tracked && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.625rem',
-          fontSize: '0.75rem', color: 'var(--warn)', fontWeight: 600,
-        }}>
-          <AlertTriangle size={12} style={{ flexShrink: 0 }} />
-          <span>
-            {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
-            {supply.refillOpen ? ' — you can refill now' : ''}
-          </span>
+/**
+ * What you can do with one dose.
+ *
+ * `when` says which day the sheet is for. A day still to come can't be logged —
+ * there is nothing to record yet — so it offers only the medication itself.
+ */
+export function DoseSheet({ entry, when, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed }) {
+  const { med, state, expectedAt, amount, dose, entry: logged } = entry;
+  const rules = rulesForMed(med);
+  const status = statusText(entry);
+  const tone = STATUS[state] || STATUS.unknown;
+  const future = when === 'future';
+  const settled = state === 'taken' || state === 'skipped-on-purpose';
+
+  return (
+    <Sheet onClose={onClose} label={med.name || 'Dose'}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <PillIcon state={state} size={52} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
+            {med.name || 'Untitled'}
+          </h2>
+          <p style={{ fontSize: '1rem', color: 'var(--subtle)', marginTop: '0.25rem' }}>
+            {doseInstruction(med, amount)}
+          </p>
         </div>
-      )}
+      </div>
 
-      {showRules && (
-        <div style={{ marginTop: '0.625rem', display: 'grid', gap: '0.25rem' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0',
+        borderTop: '1px solid var(--border)', borderBottom: rules.length ? 'none' : '1px solid var(--border)',
+        fontSize: '0.9375rem', color: 'var(--muted)',
+      }}>
+        <Clock size={16} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>
+          {expectedAt != null ? `Scheduled for ${formatClock(expectedAt)}` : 'No time set'}
+        </span>
+        {status && <span style={{ fontWeight: 700, color: tone.color }}>{status}</span>}
+      </div>
+
+      {rules.length > 0 && (
+        <div style={{ display: 'grid', gap: '0.375rem', padding: '0.75rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
           {rules.map((r) => (
-            <div key={r.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: '0.375rem',
-              fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.45,
-            }}>
-              <Clock size={11} style={{ flexShrink: 0, marginTop: '0.1875rem' }} />
-              <span><strong style={{ color: 'var(--subtle)' }}>{formatOffset(r.offsetMinutes)}</strong> — {r.text}</span>
-            </div>
+            <p key={r.id} style={{ fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.45 }}>
+              <strong style={{ color: 'var(--text)' }}>{formatOffset(r.offsetMinutes)}</strong> — {r.text}
+            </p>
           ))}
         </div>
       )}
-    </div>
+
+      {future ? (
+        <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', textAlign: 'center', margin: '1.25rem 0 0.25rem' }}>
+          You can log this on the day.
+        </p>
+      ) : null}
+
+      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1.5rem' }}>
+        {!future && !settled && (
+          <RoundAction Icon={SkipForward} label="Skip" onClick={() => onSkip(entry)} />
+        )}
+        {!future && !settled && (
+          <RoundAction Icon={Check} label="Take" primary onClick={() => onTake(entry)} />
+        )}
+        {state === 'taken' && dose && (
+          <RoundAction Icon={Clock} label="Change time" onClick={() => onChangeTime(dose)} />
+        )}
+        {settled && logged && (
+          <RoundAction Icon={Undo2} label={state === 'taken' ? 'Not taken' : 'Undo skip'} onClick={() => onUndo(logged)} />
+        )}
+        <RoundAction Icon={Info} label="Medication" onClick={() => onOpenMed(med.id)} />
+      </div>
+    </Sheet>
+  );
+}
+
+function RoundAction({ Icon, label, onClick, primary = false }) {
+  const size = primary ? '4.25rem' : '3.5rem';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+        minWidth: '4.5rem', WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <span style={{
+        width: size, height: size, borderRadius: '9999px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: primary ? 'var(--accent)' : 'var(--surface2)',
+        color: primary ? '#fff' : 'var(--text)',
+      }}>
+        <Icon size={primary ? 30 : 22} strokeWidth={primary ? 2.75 : 2} />
+      </span>
+      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: primary ? 'var(--accent-text)' : 'var(--muted)' }}>
+        {label}
+      </span>
+    </button>
   );
 }
 

@@ -5,39 +5,43 @@
 
 /* ── Theme tokens ─────────────────────────────────────── */
 :root {
-  --bg: #09090b;       /* zinc-950 */
-  --surface: #18181b;  /* zinc-900 */
-  --surface2: #27272a; /* zinc-800 */
-  --border: #3f3f46;   /* zinc-700 */
-  --border2: #52525b;  /* zinc-600 */
-  --text: #fafafa;     /* zinc-50 */
-  --muted: #a1a1aa;    /* zinc-400 */
-  --subtle: #71717a;   /* zinc-500 */
-  --accent: #7c3aed;        /* violet-700 */
-  --accent-hover: #6d28d9;  /* violet-800 */
-  --accent-soft: #2e1065;   /* very dark violet */
-  --accent-text: #c4b5fd;   /* violet-300 */
-  --positive: #10b981;      /* emerald-500 */
+  --bg: #09090b;
+  --surface: #1c1c1e;
+  --surface2: #2c2c2e;
+  --border: #3a3a3c;
+  --border2: #48484a;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #8e8e93;
+  --accent: #06b6d4;        /* cyan-500 */
+  --accent-hover: #0891b2;  /* cyan-600 */
+  --accent-soft: #083344;   /* cyan-950 */
+  --accent-text: #22d3ee;   /* cyan-400 */
+  --header: #1b3a57;        /* the navy bar across the top of Today */
+  --pill: #f07b6b;          /* the pill drawn on each dose card */
+  --positive: #10b981;
   --positive-soft: #022c22;
   --positive-text: #34d399;
-  --danger: #f43f5e;         /* rose-500 */
+  --danger: #f43f5e;
   --danger-soft: #4c0519;
-  --warn: #f59e0b;           /* amber-500 */
+  --warn: #f59e0b;
 }
 
 html.dark {
   --bg: #09090b;
-  --surface: #18181b;
-  --surface2: #27272a;
-  --border: #3f3f46;
-  --border2: #52525b;
+  --surface: #1c1c1e;
+  --surface2: #2c2c2e;
+  --border: #3a3a3c;
+  --border2: #48484a;
   --text: #fafafa;
   --muted: #a1a1aa;
-  --subtle: #71717a;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-soft: #2e1065;
-  --accent-text: #c4b5fd;
+  --subtle: #8e8e93;
+  --accent: #06b6d4;        /* cyan-500 */
+  --accent-hover: #0891b2;  /* cyan-600 */
+  --accent-soft: #083344;   /* cyan-950 */
+  --accent-text: #22d3ee;   /* cyan-400 */
+  --header: #1b3a57;        /* the navy bar across the top of Today */
+  --pill: #f07b6b;          /* the pill drawn on each dose card */
   --positive: #10b981;
   --positive-soft: #022c22;
   --positive-text: #34d399;
@@ -47,18 +51,20 @@ html.dark {
 }
 
 html.light {
-  --bg: #f9fafb;
+  --bg: #f2f2f7;
   --surface: #ffffff;
   --surface2: #f3f4f6;
   --border: #e5e7eb;
   --border2: #d1d5db;
   --text: #111827;
   --muted: #6b7280;
-  --subtle: #9ca3af;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-soft: #ede9fe;
-  --accent-text: #6d28d9;
+  --subtle: #8e8e93;
+  --accent: #0891b2;
+  --accent-hover: #0e7490;
+  --accent-soft: #cffafe;
+  --accent-text: #0e7490;
+  --header: #1b3a57;
+  --pill: #f07b6b;
   --positive: #059669;
   --positive-soft: #d1fae5;
   --positive-text: #047857;

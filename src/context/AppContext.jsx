@@ -4,7 +4,7 @@ import { saveUserData, loadUserData, subscribeUserData, saveFCMToken } from '../
 import { generateId } from '../utils/id';
 import { createSession, defaultReleaseAt } from '../lib/protocol.js';
 import { pruneSessions } from '../lib/stats.js';
-import { normalizeMed, supplyAfterDose, newMed } from '../lib/meds.js';
+import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/meds.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -301,6 +301,26 @@ export function AppProvider({ children, uid }) {
   }, [persist]);
 
   /**
+   * Take back a dose or a skip logged by mistake.
+   *
+   * A taken dose gives its units back to the supply, so tapping "Take" on the
+   * wrong row and undoing it leaves the pill count where it started.
+   */
+  const unlogCrashDose = useCallback((id) => {
+    const st = stateRef.current;
+    const dose = st.crashDoses.find((d) => d.id === id);
+    if (!dose) return;
+    persist('crashDoses', st.crashDoses.filter((d) => d.id !== id));
+
+    if (dose.status === 'skipped') return;
+    const med = st.crashMeds.find((m) => m.id === dose.medId);
+    const supply = med ? supplyAfterUndo(med, dose.amount) : null;
+    if (supply) {
+      persist('crashMeds', st.crashMeds.map((m) => (m.id === med.id ? { ...m, supply } : m)));
+    }
+  }, [persist]);
+
+  /**
    * Deliberately not taking one.
    *
    * A skip recorded as a choice is different from a dose that was simply never
@@ -423,7 +443,7 @@ export function AppProvider({ children, uid }) {
       crashDrafts, addCrashDraft, updateCrashDraft, resolveCrashDraft, deleteCrashDraft,
       crashAnchors, addCrashAnchor, updateCrashAnchor, deleteCrashAnchor,
       crashKit, updateCrashKit, flushCrashSync,
-      crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose,
+      crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose, unlogCrashDose,
       crashMeds, addCrashMed, updateCrashMed, deleteCrashMed, refillCrashMed,
       crashBehaviors, addCrashBehavior, deleteCrashBehavior,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,

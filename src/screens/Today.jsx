@@ -1,34 +1,45 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pill, LifeBuoy, Check, Package } from 'lucide-react';
+import { Pill, LifeBuoy, Check, Package, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useNow } from '../lib/useCountdown.js';
 import { mergeKit } from '../lib/kit.js';
 import { activeSession, timerRemaining, formatRemaining } from '../lib/protocol.js';
-import { expectedDosesToday, supplyStatus, activeMeds, sameLocalDay as sameDay } from '../lib/meds.js';
+import {
+  expectedDosesOnDay, supplyStatus, activeMeds, startOfDay, sameLocalDay as sameDay,
+} from '../lib/meds.js';
 import { adherenceDays, adherenceSentence } from '../lib/adherence.js';
-import { formatClock, formatDayLong } from '../lib/time.js';
-import ScheduleRow, { TimeEditor } from '../components/ScheduleRow.jsx';
+import { formatClock } from '../lib/time.js';
+import ScheduleRow, { DoseSheet, TimeEditor } from '../components/ScheduleRow.jsx';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
-import { pageStyle } from '../components/medsUi.jsx';
+
+const DAY_LETTERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** The local midnight `offset` days from `ts`, safe across a clock change. */
+function shiftDay(ts, offset) {
+  const d = new Date(startOfDay(ts));
+  d.setDate(d.getDate() + offset);
+  return d.getTime();
+}
 
 /**
  * Today.
  *
- * Doses first, and doses biggest. On an ordinary morning this screen has one
- * job — say what's due and take one tap to log it — and everything else on it
- * is arranged to stay out of the way of that.
+ * A week along the top, and under it the day's doses grouped by the time
+ * they're due — the shape every easy medication app has settled on, because it
+ * answers "what do I take now?" before anything else is read.
  *
- * The crash protocol is one row near the bottom. The exception is a session
- * already running, which goes to the top: at that moment it is the only thing
- * on this screen that matters.
+ * Any day in the week can be picked: a past one to fill in what was missed, a
+ * coming one to see what's ahead. Everything that isn't a dose — the crash
+ * protocol, supply warnings, tonight's window — only shows on today itself.
  */
 export default function RxHome() {
   const {
     crashMeds, crashDoses, crashKit, crashSessions,
-    logCrashDose, skipCrashDose, addCrashDose, updateCrashDose,
+    logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
   } = useApp();
   const navigate = useNavigate();
 
@@ -38,13 +49,29 @@ export default function RxHome() {
     crashDoses.length ? Math.max(...crashDoses.map((d) => d.takenAt)) : 0}`;
   const now = useNow({ tick: 60_000, syncKey });
 
+  // Held as an offset from today rather than a date, so an app left open past
+  // midnight rolls forward with the day instead of staying on yesterday.
+  const [offset, setOffset] = useState(0);
+  const day = shiftDay(now, offset);
+  const isToday = offset === 0;
+  const when = offset < 0 ? 'past' : offset > 0 ? 'future' : 'today';
+
   const kit = mergeKit(crashKit);
   const active = activeSession(crashSessions);
+  const [openKey, setOpenKey] = useState(null);
   const [editingDose, setEditingDose] = useState(null);
   const [justLogged, setJustLogged] = useState(false);
 
-  const schedule = expectedDosesToday(crashMeds, crashDoses, now);
+  const schedule = expectedDosesOnDay(crashMeds, crashDoses, day, now);
+  const groups = groupByTime(schedule);
   const tracking = kit.doseTracking !== false;
+
+  // The heading picked out in the accent: the first time still waiting on
+  // something, which is the one to look at right now.
+  const currentGroup = isToday
+    ? groups.find((g) => g.entries.some((e) => e.state === 'due'))
+      || groups.find((g) => g.entries.some((e) => e.state === 'upcoming'))
+    : null;
 
   const needsAttention = activeMeds(crashMeds)
     .map((m) => ({ med: m, supply: supplyStatus(m, now) }))
@@ -52,129 +79,175 @@ export default function RxHome() {
 
   const adherence = adherenceSentence(adherenceDays(crashMeds, crashDoses, { now }));
 
+  // A dose logged on a past day is recorded at the time it was due, so it lands
+  // on that day and in that slot. Today's is recorded as now, as it always was.
+  const loggedAt = (e) => {
+    if (isToday) return Date.now();
+    return e.expectedAt ?? shiftDay(day, 0) + 12 * 60 * 60 * 1000;
+  };
+
+  const take = (e) => {
+    logCrashDose(e.medId, loggedAt(e), { slotId: e.slotId, amount: e.amount });
+    setOpenKey(null);
+  };
+  const skip = (e) => {
+    skipCrashDose(e.medId, loggedAt(e), { slotId: e.slotId });
+    setOpenKey(null);
+  };
+  const undo = (logged) => {
+    unlogCrashDose(logged.id);
+    setOpenKey(null);
+  };
+
   const logPlain = () => {
     addCrashDose(Date.now());
     setJustLogged(true);
     setTimeout(() => setJustLogged(false), 2000);
   };
 
+  const openEntry = schedule.find((e) => e.key === openKey) || null;
   const editable = crashDoses.find((d) => d.id === editingDose) || null;
 
   return (
-    <div className="app-page" style={pageStyle}>
-      <div style={{ paddingTop: '1.5rem', paddingBottom: '1.25rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-          Today
-        </h1>
-        <p style={{ color: 'var(--subtle)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-          {formatDayLong(now)}
-        </p>
+    <div className="app-page" style={{ paddingBottom: '7rem' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20 }}>
+        <TopBar onAdd={() => navigate('/meds/new')} />
+        <WeekStrip day={day} today={shiftDay(now, 0)} onPick={(ts) => setOffset(daysBetween(shiftDay(now, 0), ts))} />
       </div>
 
-      {/* A live session outranks everything. */}
-      {active && (
-        <button
-          onClick={() => navigate('/crash/run')}
-          style={{
-            width: '100%', borderRadius: '1rem', border: 'none', marginBottom: '1.25rem',
-            backgroundColor: 'var(--accent)', color: '#fff', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '0.25rem', padding: '1.25rem',
-          }}
-        >
-          <span style={{ fontSize: '1.125rem', fontWeight: 800 }}>Pick it back up</span>
-          <span style={{ fontSize: '0.875rem', opacity: 0.9, fontVariantNumeric: 'tabular-nums' }}>
-            {timerRemaining(active, now) > 0
-              ? `${formatRemaining(timerRemaining(active, now))} left`
-              : 'The 30 minutes are up'}
-          </span>
-        </button>
-      )}
+      <div style={{ padding: '0 1rem' }}>
+        {/* A live session outranks everything. */}
+        {isToday && active && (
+          <button
+            onClick={() => navigate('/crash/run')}
+            style={{
+              width: '100%', borderRadius: '1rem', border: 'none', marginTop: '1.25rem',
+              backgroundColor: 'var(--accent)', color: '#fff', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: '0.25rem', padding: '1.25rem',
+            }}
+          >
+            <span style={{ fontSize: '1.125rem', fontWeight: 800 }}>Pick it back up</span>
+            <span style={{ fontSize: '0.875rem', opacity: 0.9, fontVariantNumeric: 'tabular-nums' }}>
+              {timerRemaining(active, now) > 0
+                ? `${formatRemaining(timerRemaining(active, now))} left`
+                : 'The 30 minutes are up'}
+            </span>
+          </button>
+        )}
 
-      {/* ── The doses ── */}
-      {tracking && (schedule.length > 0 ? (
-        <div style={{ display: 'grid', gap: '0.625rem' }}>
-          {schedule.map((entry) => (
-            <ScheduleRow
-              key={entry.key}
-              entry={entry}
-              now={now}
-              onLog={(e) => logCrashDose(e.medId, Date.now(), { slotId: e.slotId, amount: e.amount })}
-              onSkip={(e) => skipCrashDose(e.medId, Date.now(), { slotId: e.slotId })}
-              onEdit={(medId) => navigate(`/meds/${medId}`)}
+        {/* ── The doses, by the time they're due ── */}
+        {tracking && (groups.length > 0 ? (
+          groups.map((g) => (
+            <section key={g.key} style={{ marginTop: '1.5rem' }}>
+              <h2 style={{
+                fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.02em',
+                color: g === currentGroup ? 'var(--accent-text)' : 'var(--text)',
+                margin: '0 0 0.75rem 0.5rem',
+              }}>
+                {g.label}
+              </h2>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {g.entries.map((entry) => (
+                  <ScheduleRow key={entry.key} entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : isToday ? (
+          <div style={{ marginTop: '1.5rem' }}>
+            <EmptyToday
+              onAdd={() => navigate('/meds/new')}
+              onLogPlain={logPlain}
+              justLogged={justLogged}
             />
-          ))}
-        </div>
-      ) : (
-        <>
-          <EmptyToday
-            onAdd={() => navigate('/meds/new')}
-            onLogPlain={logPlain}
-            justLogged={justLogged}
-          />
-          <PlainDoses doses={crashDoses} now={now} onEdit={setEditingDose} />
-        </>
-      ))}
+            <PlainDoses doses={crashDoses} now={now} onEdit={setEditingDose} />
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: 'var(--subtle)', fontSize: '1rem', marginTop: '3rem' }}>
+            Nothing scheduled this day.
+          </p>
+        ))}
 
-      {/* ── On a home screen, or not yet ──
-          Below the doses, because nothing outranks what's due this morning —
-          but above everything else, because until Rx is installed its dose
-          reminders cannot reach a lock screen at all on iOS, and a tracker
-          that quietly never buzzes is the failure mode worth interrupting for. */}
-      <InstallCard />
+        {isToday && (
+          <>
+            {/* ── On a home screen, or not yet ──
+                Below the doses, because nothing outranks what's due this
+                morning — but above everything else, because until Rx is
+                installed its dose reminders cannot reach a lock screen at all
+                on iOS. */}
+            <div style={{ marginTop: '1.5rem' }}>
+              <InstallCard />
+            </div>
 
-      {/* ── Needs sorting ── */}
-      {needsAttention.length > 0 && (
-        <button
-          onClick={() => navigate('/supply')}
-          style={{
-            width: '100%', marginTop: '1rem', padding: '0.875rem 1rem', textAlign: 'left',
-            borderRadius: '0.875rem', cursor: 'pointer',
-            backgroundColor: 'var(--warn-soft, var(--surface2))',
-            border: '1px solid var(--warn)',
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-          }}
-        >
-          <Package size={17} style={{ color: 'var(--warn)', flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)' }}>
-            {needsAttention.length === 1
-              ? `${needsAttention[0].med.name || 'One medication'} needs sorting`
-              : `${needsAttention.length} need sorting`}
-          </span>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--warn)' }}>Supply</span>
-        </button>
-      )}
+            {/* ── Needs sorting ── */}
+            {needsAttention.length > 0 && (
+              <button
+                onClick={() => navigate('/supply')}
+                style={{
+                  width: '100%', marginTop: '1rem', padding: '1rem', textAlign: 'left',
+                  borderRadius: '1rem', cursor: 'pointer',
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--warn)',
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                }}
+              >
+                <Package size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
+                  {needsAttention.length === 1
+                    ? `${needsAttention[0].med.name || 'One medication'} needs a refill`
+                    : `${needsAttention.length} need a refill`}
+                </span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--warn)' }}>Supply</span>
+              </button>
+            )}
 
-      {/* ── Tonight ── */}
-      {tracking && (
-        <div style={{ marginTop: '1.25rem' }}>
-          <WindowTimeline meds={crashMeds} doses={crashDoses} kit={kit} now={now} />
-        </div>
-      )}
+            {/* ── Tonight ── */}
+            {tracking && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <WindowTimeline meds={crashMeds} doses={crashDoses} kit={kit} now={now} />
+              </div>
+            )}
 
-      {/* ── How it's been going ── */}
-      {adherence && (
-        <button
-          onClick={() => navigate('/history')}
-          style={{
-            width: '100%', marginTop: '1rem', padding: '0.875rem 1rem', textAlign: 'left',
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: '0.875rem', fontWeight: 600, color: 'var(--subtle)',
-          }}
-        >
-          {adherence}
-        </button>
-      )}
+            {/* ── How it's been going ── */}
+            {adherence && (
+              <button
+                onClick={() => navigate('/history')}
+                style={{
+                  width: '100%', marginTop: '1rem', padding: '0.875rem 0.5rem', textAlign: 'left',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: '0.9375rem', fontWeight: 600, color: 'var(--subtle)',
+                }}
+              >
+                {adherence}
+              </button>
+            )}
 
-      {/* ── The tool, one tap away and no closer ── */}
-      <div style={{ marginTop: '1.5rem' }}>
-        <QuietRow
-          Icon={LifeBuoy}
-          label={active ? 'Back to the crash protocol' : 'I’m crashing'}
-          tone="accent"
-          onClick={() => navigate('/crash')}
-        />
+            {/* ── The tool, one tap away and no closer ── */}
+            <div style={{ marginTop: '1.5rem' }}>
+              <QuietRow
+                Icon={LifeBuoy}
+                label={active ? 'Back to the crash protocol' : 'I’m crashing'}
+                tone="accent"
+                onClick={() => navigate('/crash')}
+              />
+            </div>
+          </>
+        )}
       </div>
+
+      {openEntry && (
+        <DoseSheet
+          entry={openEntry}
+          when={when}
+          onClose={() => setOpenKey(null)}
+          onTake={take}
+          onSkip={skip}
+          onUndo={undo}
+          onChangeTime={(dose) => { setOpenKey(null); setEditingDose(dose.id); }}
+          onOpenMed={(medId) => navigate(`/meds/${medId}`)}
+        />
+      )}
 
       {editable && (
         <TimeEditor
@@ -182,6 +255,158 @@ export default function RxHome() {
           onSave={(takenAt) => { updateCrashDose(editable.id, { takenAt }); setEditingDose(null); }}
           onClose={() => setEditingDose(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function daysBetween(fromDay, toDay) {
+  return Math.round((startOfDay(toDay) - startOfDay(fromDay)) / (24 * 60 * 60 * 1000));
+}
+
+/** Rows sharing a due time, under one heading; rows with no time go last. */
+function groupByTime(schedule) {
+  const out = [];
+  for (const entry of schedule) {
+    const key = entry.expectedAt == null ? 'none' : String(entry.expectedAt);
+    let group = out.find((g) => g.key === key);
+    if (!group) {
+      group = { key, label: entry.expectedAt == null ? 'Any time' : formatClock(entry.expectedAt), entries: [] };
+      out.push(group);
+    }
+    group.entries.push(entry);
+  }
+  return out;
+}
+
+/**
+ * The navy bar: who's signed in, and the quickest way to add something.
+ *
+ * It runs up under the status bar on an installed iPhone — the body is padded
+ * by the safe area, and this pulls itself back up over that padding so the
+ * colour reaches the top edge rather than stopping short of it.
+ */
+function TopBar({ onAdd }) {
+  const { user } = useAuth();
+  const name = (user?.displayName || '').trim().split(/\s+/)[0] || 'Rx';
+  const initial = name.charAt(0).toUpperCase();
+
+  return (
+    <div style={{
+      backgroundColor: 'var(--header)',
+      marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+      paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
+      paddingBottom: '0.75rem', paddingLeft: '1rem', paddingRight: '0.5rem',
+      display: 'flex', alignItems: 'center', gap: '0.875rem',
+    }}>
+      {user?.photoURL ? (
+        <img
+          src={user.photoURL}
+          alt=""
+          referrerPolicy="no-referrer"
+          style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', objectFit: 'cover', flexShrink: 0 }}
+        />
+      ) : (
+        <span style={{
+          width: '2.75rem', height: '2.75rem', borderRadius: '9999px', flexShrink: 0,
+          backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.125rem', fontWeight: 700,
+        }}>
+          {initial}
+        </span>
+      )}
+      <span style={{ flex: 1, fontSize: '1.375rem', fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
+        {name}
+      </span>
+      <button
+        onClick={onAdd}
+        aria-label="Add a medication"
+        style={{
+          width: '2.75rem', height: '2.75rem', background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+        }}
+      >
+        <Plus size={30} strokeWidth={1.75} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Sunday to Saturday around the chosen day. Swipe it sideways for the week
+ * before or after; tap the date under it to come back to today.
+ */
+function WeekStrip({ day, today, onPick }) {
+  const touch = useRef(null);
+  const sunday = shiftDay(day, -new Date(day).getDay());
+  const days = Array.from({ length: 7 }, (_, i) => shiftDay(sunday, i));
+  const isToday = day === today;
+
+  const label = new Date(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const weekday = new Date(day).toLocaleDateString(undefined, { weekday: 'long' });
+
+  return (
+    <div
+      style={{ backgroundColor: 'var(--surface)', padding: '0.75rem 0.5rem 0.875rem' }}
+      onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        if (touch.current == null) return;
+        const dx = e.changedTouches[0].clientX - touch.current;
+        touch.current = null;
+        if (Math.abs(dx) > 50) onPick(shiftDay(day, dx < 0 ? 7 : -7));
+      }}
+    >
+      <div style={{ display: 'flex' }}>
+        {days.map((d) => {
+          const selected = d === day;
+          const current = d === today;
+          return (
+            <button
+              key={d}
+              onClick={() => onPick(d)}
+              aria-label={new Date(d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              aria-pressed={selected}
+              style={{
+                flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <span style={{
+                fontSize: '0.9375rem', fontWeight: 500,
+                color: current ? 'var(--accent-text)' : 'var(--text)',
+              }}>
+                {DAY_LETTERS[new Date(d).getDay()]}
+              </span>
+              <span style={{
+                width: '2.625rem', height: '2.625rem', borderRadius: '9999px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.25rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+                backgroundColor: selected ? 'var(--accent)' : 'transparent',
+                color: selected ? '#fff' : current ? 'var(--accent-text)' : 'var(--text)',
+              }}>
+                {new Date(d).getDate()}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={() => onPick(today)}
+        disabled={isToday}
+        style={{
+          display: 'block', margin: '0.625rem auto 0', background: 'none', border: 'none',
+          cursor: isToday ? 'default' : 'pointer', padding: '0.125rem 0.5rem',
+          fontSize: '1.125rem', fontWeight: 700, color: 'var(--accent-text)',
+        }}
+      >
+        {isToday ? `Today, ${label}` : `${weekday}, ${label}`}
+      </button>
+      {!isToday && (
+        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>
+          Tap to go back to today
+        </p>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import Login from './Login';
 // The ground each theme paints, matching --bg in index.css. Installed, this is
 // the colour the OS draws behind the status bar and around a rubber-band
 // scroll, so a stale value shows as a dark band above a light app.
-const THEME_COLOR = { dark: '#09090b', light: '#f9fafb' };
+const THEME_COLOR = { dark: '#09090b', light: '#f2f2f7' };
 
 function ThemeSync() {
   const { settings } = useApp();
