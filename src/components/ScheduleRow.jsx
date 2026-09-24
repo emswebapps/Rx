@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Clock, AlertTriangle, X, SkipForward, Info, Undo2, NotebookPen } from 'lucide-react';
 import Modal from './Modal';
 import Sheet from './Sheet';
+import { PillGlyph, pillLook } from './PillShape.jsx';
 import { formatClock } from '../lib/time.js';
 import {
   rulesForMed, supplyStatus, formatOffset, formatAmount, wearOffFor, formatHalfLife,
@@ -35,8 +36,9 @@ function statusText(entry) {
   return STATUS[entry.state]?.text ?? null;
 }
 
-/** A round tablet with a score line, badged with how the dose went. */
-export function PillIcon({ state, size = 44 }) {
+/** The medication's own pill (see PillShape.jsx), badged with how the dose went. */
+export function PillIcon({ state, size = 44, med }) {
+  const look = pillLook(med);
   const badge = state === 'taken' ? { bg: 'var(--positive)', Icon: Check }
     : state === 'skipped' ? { bg: 'var(--danger)', Icon: X }
     : state === 'skipped-on-purpose' ? { bg: 'var(--subtle)', Icon: SkipForward }
@@ -45,11 +47,7 @@ export function PillIcon({ state, size = 44 }) {
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} viewBox="0 0 44 44" aria-hidden="true" style={{ opacity: faded ? 0.45 : 1 }}>
-        <circle cx="22" cy="23.5" r="17" fill="rgba(0,0,0,0.25)" />
-        <circle cx="22" cy="22" r="17" fill="var(--pill)" />
-        <line x1="14" y1="30" x2="30" y2="14" stroke="rgba(0,0,0,0.18)" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
+      <PillGlyph shape={look.shape} color={look.color} size={size} faded={faded} />
       {badge && (
         <span style={{
           position: 'absolute', right: -3, bottom: -3,
@@ -101,7 +99,7 @@ export default function ScheduleRow({ entry, onOpen, onNotes, noteCount = 0, now
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        <PillIcon state={state} />
+        <PillIcon state={state} med={med} />
         <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.25rem 0' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
@@ -262,7 +260,7 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
   return (
     <Sheet onClose={onClose} label={med.name || 'Dose'}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-        <PillIcon state={state} size={52} />
+        <PillIcon state={state} size={52} med={med} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
             {med.name || 'Untitled'}

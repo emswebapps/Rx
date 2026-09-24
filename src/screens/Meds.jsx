@@ -3,6 +3,7 @@ import { Plus, Pill, Clock, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNow } from '../lib/useCountdown.js';
 import { formatClock } from '../lib/time.js';
+import { PillGlyph, pillLook } from '../components/PillShape.jsx';
 import {
   normalizeMed, expectedDosesToday, supplyStatus, rulesForMed, formatOffset, frequencyLabel,
 } from '../lib/meds.js';
@@ -122,7 +123,8 @@ export default function MedsView() {
                   opacity: med.active === false ? 0.55 : 1,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <PillGlyph {...pillLook(med)} size={28} faded={med.active === false} />
                   <span style={{ flex: 1, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>
                     {med.name || 'Untitled'}
                   </span>

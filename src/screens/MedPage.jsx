@@ -12,6 +12,7 @@ import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
 import { formatHours } from '../lib/window.js';
 import RoutineEditor from '../components/RoutineEditor.jsx';
+import { PillGlyph, pillLook, PILL_SHAPES, PILL_COLORS } from '../components/PillShape.jsx';
 import { formatClock } from '../lib/time.js';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
@@ -320,6 +321,9 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
             </option>
           ))}
         </select>
+
+        <label className="app-label" style={{ marginTop: '0.75rem' }}>Looks like</label>
+        <LookPicker med={med} onChange={(patch) => { const l = pillLook(med); set({ appearance: { shape: l.shape, color: l.colorKey, ...patch } }); }} />
 
         <label className="app-label" style={{ marginTop: '0.75rem' }}>Half-life (hours)</label>
         <input
@@ -752,6 +756,46 @@ function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) 
           routineSince: routine.length ? (time.routineSince || Date.now()) : null,
         })}
       />
+    </div>
+  );
+}
+
+/**
+ * Shape and colour for the medication's icon, previewed as you pick. The
+ * shapes are drawn in the chosen colour so the row reads as "which of these
+ * is mine", not as a list of words.
+ */
+function LookPicker({ med, onChange }) {
+  const look = pillLook(med);
+  const tile = (on) => ({
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+    padding: '0.5rem 0.25rem', borderRadius: '0.75rem', cursor: 'pointer',
+    backgroundColor: on ? 'var(--accent-soft)' : 'var(--surface2)',
+    border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+  });
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.375rem' }}>
+        {PILL_SHAPES.map((s) => (
+          <button key={s.key} onClick={() => onChange({ shape: s.key })} aria-pressed={look.shape === s.key}
+            aria-label={s.label} style={tile(look.shape === s.key)}>
+            <PillGlyph shape={s.key} color={look.color} size={30} />
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--muted)' }}>{s.label}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.625rem' }}>
+        {PILL_COLORS.map((c) => {
+          const on = look.colorKey === c.key;
+          return (
+            <button key={c.key} onClick={() => onChange({ color: c.key })} aria-pressed={on} aria-label={c.key}
+              style={{
+                width: '2rem', height: '2rem', borderRadius: '9999px', cursor: 'pointer', backgroundColor: c.hex,
+                border: 'none', boxShadow: on ? '0 0 0 2px var(--bg), 0 0 0 4px var(--accent)' : 'inset 0 0 0 1px rgba(0,0,0,0.2)',
+              }} />
+          );
+        })}
+      </div>
     </div>
   );
 }
