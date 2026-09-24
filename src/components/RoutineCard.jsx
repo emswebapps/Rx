@@ -29,9 +29,9 @@ export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpe
   return (
     <div
       className="app-card"
-      style={{ padding: '0.875rem 1rem', borderColor: live.current ? 'var(--accent-soft)' : undefined }}
+      style={{ padding: '0.5rem 0.875rem', borderColor: live.current ? 'var(--accent-soft)' : undefined }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.125rem' }}>
         <p style={{ flex: 1, fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--muted)' }}>
           ROUTINE
         </p>
@@ -45,7 +45,7 @@ export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpe
         </p>
       </div>
 
-      <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.25rem' }}>
+      <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 0 }}>
         {live.steps.map((step, i) => (
           <Step
             key={step.id}
@@ -71,13 +71,13 @@ function Marker({ step }) {
   const Icon = step.kind === 'wait' ? Hourglass : step.kind === 'dose' ? PillGlyph : step.kind === 'meal' ? Utensils : null;
   return (
     <span style={{
-      width: '1.75rem', height: '1.75rem', borderRadius: '9999px', flexShrink: 0,
+      width: '1.375rem', height: '1.375rem', borderRadius: '9999px', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       backgroundColor: done ? 'var(--positive)' : current ? 'var(--accent)' : 'transparent',
       border: done || current ? 'none' : '2px solid var(--border2)',
       color: done || current ? '#fff' : 'var(--subtle)',
     }}>
-      {done ? <Check size={16} strokeWidth={3} /> : Icon ? <Icon size={14} strokeWidth={2.5} /> : null}
+      {done ? <Check size={13} strokeWidth={3} /> : Icon ? <Icon size={11} strokeWidth={2.5} /> : null}
     </span>
   );
 }
@@ -90,7 +90,7 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
   if (step.kind === 'wait') {
     const running = step.state === 'waiting';
     return (
-      <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.375rem 0', opacity: faded }}>
+      <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem 0', opacity: faded }}>
         <Marker step={step} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {running ? (
@@ -111,7 +111,7 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
               </p>
             </>
           ) : (
-            <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: done ? 'var(--subtle)' : 'var(--text)' }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: done ? 'var(--subtle)' : 'var(--text)' }}>
               {!done ? `Wait ${step.minutes} min`
                 : step.endsAt != null && step.doneAt < step.endsAt
                   ? `Wait cut short — ${Math.max(0, Math.round((step.endsAt - step.doneAt) / 60000))} min left on it`
@@ -126,11 +126,11 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
   if (step.kind === 'dose') {
     const skipped = step.state === 'skipped';
     return (
-      <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.375rem 0', opacity: skipped ? 0.55 : 1 }}>
+      <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem 0', opacity: skipped ? 0.55 : 1 }}>
         <Marker step={step} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            fontSize: '0.9375rem', fontWeight: 700,
+            fontSize: '0.875rem', fontWeight: 700,
             color: done ? 'var(--subtle)' : 'var(--text)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -183,7 +183,7 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
         aria-pressed={done}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
-          padding: '0.375rem 0', background: 'none', border: 'none', textAlign: 'left',
+          padding: '0.25rem 0', background: 'none', border: 'none', textAlign: 'left',
           cursor: readOnly ? 'default' : 'pointer', opacity: faded,
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -191,7 +191,7 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
         <Marker step={step} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontSize: '0.9375rem', fontWeight: 600,
+            display: 'block', fontSize: '0.875rem', fontWeight: 600,
             color: done ? 'var(--subtle)' : 'var(--text)',
             textDecoration: done ? 'line-through' : 'none',
           }}>
@@ -230,7 +230,7 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
         aria-pressed={done}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
-          padding: '0.375rem 0', background: 'none', border: 'none', textAlign: 'left',
+          padding: '0.25rem 0', background: 'none', border: 'none', textAlign: 'left',
           cursor: readOnly ? 'default' : 'pointer', opacity: faded,
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -238,7 +238,7 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
         <Marker step={step} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            display: 'block', fontSize: '0.9375rem', fontWeight: 600,
+            display: 'block', fontSize: '0.875rem', fontWeight: 600,
             color: done ? 'var(--subtle)' : 'var(--text)',
           }}>
             {done && step.ate ? step.ate : step.text}
@@ -257,7 +257,7 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
       </button>
 
       {done && !readOnly && onAte && (editing ? (
-        <div style={{ display: 'flex', gap: '0.375rem', margin: '0.25rem 0 0.375rem 2.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.375rem', margin: '0.125rem 0 0.25rem 2.125rem' }}>
           <input
             autoFocus
             value={text}
@@ -275,7 +275,7 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
         <button
           onClick={() => { setText(step.ate || ''); setEditing(true); }}
           style={{
-            margin: '0 0 0.25rem 2.5rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+            margin: '0 0 0.25rem 2.125rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer',
             fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)',
           }}
         >

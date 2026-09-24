@@ -19,6 +19,18 @@ const MINUTE_MS = 60 * 1000;
 // Hours earlier, "eat 2 eggs" for the afternoon dose is noise.
 export const ROUTINE_LEAD_MS = 90 * MINUTE_MS;
 
+// How long a step after the dose (the meal after it) stays up front. Past
+// this it's history, and the screen moves on rather than nagging all day.
+export const AFTER_DOSE_MS = 2 * 60 * MINUTE_MS;
+
+/** Is there a step after this taken dose still worth showing? */
+export function afterDoseOpen(r, now = Date.now()) {
+  if (!r || r.entry.state !== 'taken' || !r.current || !r.entry.dose) return false;
+  if (now - r.entry.dose.takenAt > AFTER_DOSE_MS) return false;
+  const doseAt = r.steps.findIndex((s) => s.kind === 'dose');
+  return r.steps.indexOf(r.current) > doseAt;
+}
+
 /**
  * `schedule` is expectedDosesOnDay for today; `routines` is routinesForDay
  * over it; `window` is effectiveWindow (or null).
@@ -33,6 +45,14 @@ export function nextUp({ schedule = [], routines = [], window = null, now = Date
       kind: 'wait', key: r.key, entry: r.entry, endsAt: r.steps[i].endsAt,
       minutes: r.steps[i].minutes, then: after, routine: r,
     };
+  }
+
+  // 2a. Something still to do after a dose already taken — the meal after
+  // it — before anything that's still hours off.
+  for (const r of routines) {
+    if (afterDoseOpen(r, now)) {
+      return { kind: 'step', key: r.key, entry: r.entry, step: r.current, routine: r, afterDose: true };
+    }
   }
 
   const open = schedule

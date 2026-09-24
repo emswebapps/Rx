@@ -91,35 +91,31 @@ export default function ScheduleRow({ entry, onOpen, onNotes, noteCount = 0, now
         aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
         style={{
           width: '100%', textAlign: 'left', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: '1rem',
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
           // Room on the right for the notes button, which sits over the card
           // rather than inside this one — a button can't hold a button.
-          padding: `1.125rem ${onNotes ? '3.75rem' : '1.25rem'} 1.125rem 1.25rem`,
+          padding: `0.625rem ${onNotes ? '3.25rem' : '0.875rem'} 0.625rem 0.875rem`,
           background: 'none', border: 'none', borderRadius: '1rem',
           WebkitTapHighlightColor: 'transparent',
         }}
       >
-        <PillIcon state={state} med={med} />
-        <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.25rem 0' }} />
+        <PillIcon state={state} med={med} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            fontSize: '1.1875rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
+            fontSize: '1rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
           }}>
             {med.name || 'Untitled'}
           </p>
-          <p style={{ fontSize: '1rem', color: 'var(--subtle)', marginTop: '0.25rem', lineHeight: 1.35 }}>
+          {/* Instruction and status share a line: one glance, one row. */}
+          <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.125rem', lineHeight: 1.35 }}>
+            {status && <strong style={{ fontWeight: 700, color: tone.color }}>{status} · </strong>}
             {doseInstruction(med, amount)}
           </p>
-          {status && (
-            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: tone.color, marginTop: '0.25rem' }}>
-              {status}
-            </p>
-          )}
           {facts.length > 0 && (
             <p style={{
-              fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.3125rem', lineHeight: 1.35,
+              fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.125rem', lineHeight: 1.35,
               fontVariantNumeric: 'tabular-nums',
             }}>
               {facts.join(' · ')}
@@ -143,15 +139,15 @@ export default function ScheduleRow({ entry, onOpen, onNotes, noteCount = 0, now
           onClick={() => onNotes(med)}
           aria-label={`Notes for ${med.name || 'this medication'}${noteCount ? ` (${noteCount})` : ''}`}
           style={{
-            position: 'absolute', top: '50%', right: '0.75rem', transform: 'translateY(-50%)',
-            width: '2.5rem', height: '2.5rem', borderRadius: '9999px', cursor: 'pointer',
+            position: 'absolute', top: '50%', right: '0.5rem', transform: 'translateY(-50%)',
+            width: '2.25rem', height: '2.25rem', borderRadius: '9999px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backgroundColor: 'var(--surface2)', border: 'none',
             color: noteCount ? 'var(--accent-text)' : 'var(--muted)',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <NotebookPen size={18} />
+          <NotebookPen size={16} />
           {noteCount > 0 && (
             <span style={{
               position: 'absolute', top: -2, right: -2, minWidth: '1.125rem', height: '1.125rem',

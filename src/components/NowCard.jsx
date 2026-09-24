@@ -34,10 +34,14 @@ export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, on
   if (next.kind === 'step') {
     const meal = next.step.kind === 'meal';
     return (
-      <Shell tone="accent" label={`UP NEXT · ${name(next.entry)} at ${formatClock(next.entry.expectedAt)}`} Icon={meal ? Utensils : Check}>
+      <Shell
+        tone="accent"
+        label={next.afterDose ? `AFTER YOUR ${name(next.entry).toUpperCase()}` : `UP NEXT · ${name(next.entry)} at ${formatClock(next.entry.expectedAt)}`}
+        Icon={meal ? Utensils : Check}
+      >
         <Big small>{next.step.text}</Big>
         <Action onClick={() => onStep(next.entry, next.step.id)}>
-          <Check size={18} strokeWidth={3} /> {meal ? 'Ate it — start the timer' : 'Done'}
+          <Check size={18} strokeWidth={3} /> {meal ? (next.afterDose || next.routine.steps[next.routine.steps.indexOf(next.step) + 1]?.kind !== 'wait' ? 'Ate it' : 'Ate it — start the timer') : 'Done'}
         </Action>
       </Shell>
     );
@@ -48,7 +52,8 @@ export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, on
     const soon = next.due || left <= 15 * 60 * 1000;
     return (
       <Shell tone={soon ? 'accent' : 'plain'} label={`NEXT DOSE · ${name(next.entry)}`} Icon={Pill}>
-        <Big>{next.due ? 'Due now' : `in ${formatUntil(left)}`}</Big>
+        {/* Hours away isn't urgent, so it isn't shouted. */}
+        <Big small={!soon}>{next.due ? 'Due now' : `in ${formatUntil(left)}`}</Big>
         <Sub>{formatClock(next.at)}</Sub>
         {soon && (
           <Action onClick={() => onOpenDose(next.entry.key)}>
@@ -99,7 +104,7 @@ function Shell({ tone, label, Icon, children }) {
     <section
       aria-live="polite"
       style={{
-        borderRadius: '1.25rem', padding: '1rem 1.125rem 1.125rem',
+        borderRadius: '1rem', padding: '0.75rem 0.875rem 0.875rem',
         backgroundColor: t.bg, border: `1px solid ${t.border}`,
       }}
     >
@@ -118,8 +123,8 @@ function Shell({ tone, label, Icon, children }) {
 function Big({ children, small }) {
   return (
     <p style={{
-      fontSize: small ? '1.625rem' : '2.75rem', fontWeight: 800, lineHeight: 1.1,
-      color: 'var(--text)', marginTop: '0.375rem', letterSpacing: '-0.02em',
+      fontSize: small ? '1.25rem' : '2.25rem', fontWeight: 800, lineHeight: 1.1,
+      color: 'var(--text)', marginTop: '0.25rem', letterSpacing: '-0.02em',
       fontVariantNumeric: 'tabular-nums',
     }}>
       {children}
@@ -128,13 +133,13 @@ function Big({ children, small }) {
 }
 
 function Sub({ children }) {
-  return <p style={{ fontSize: '0.9375rem', color: 'var(--muted)', marginTop: '0.25rem' }}>{children}</p>;
+  return <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginTop: '0.125rem' }}>{children}</p>;
 }
 
 function Bar({ pct }) {
   const p = Math.max(0, Math.min(1, pct));
   return (
-    <div style={{ height: '0.375rem', borderRadius: '9999px', backgroundColor: 'var(--surface2)', marginTop: '0.75rem', overflow: 'hidden' }}>
+    <div style={{ height: '0.3125rem', borderRadius: '9999px', backgroundColor: 'var(--surface2)', marginTop: '0.5rem', overflow: 'hidden' }}>
       <div style={{ width: `${p * 100}%`, height: '100%', backgroundColor: 'var(--accent)', transition: 'width 1s linear' }} />
     </div>
   );
@@ -146,10 +151,10 @@ function Action({ onClick, children, secondary, inline }) {
       onClick={onClick}
       style={{
         flex: inline ? 1 : undefined, width: inline ? undefined : '100%',
-        marginTop: inline ? 0 : '0.875rem', padding: '0.8125rem 1rem', borderRadius: '0.875rem',
+        marginTop: inline ? 0 : '0.625rem', padding: '0.625rem 1rem', borderRadius: '0.75rem',
         cursor: 'pointer', border: secondary ? '1px solid var(--border)' : 'none',
         backgroundColor: secondary ? 'var(--surface2)' : 'var(--accent)',
-        color: secondary ? 'var(--text)' : '#fff', fontSize: '1rem', fontWeight: 800,
+        color: secondary ? 'var(--text)' : '#fff', fontSize: '0.9375rem', fontWeight: 800,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
       }}
     >

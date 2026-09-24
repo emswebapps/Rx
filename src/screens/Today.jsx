@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pill, LifeBuoy, Check, Package, Plus, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import { useNow } from '../lib/useCountdown.js';
 import { mergeKit } from '../lib/kit.js';
 import { activeSession, timerRemaining, formatRemaining } from '../lib/protocol.js';
@@ -18,7 +17,7 @@ import { notesForMed } from '../lib/notes.js';
 import { checkInsDue } from '../lib/effects.js';
 import EffectCheckIn from '../components/EffectCheckIn.jsx';
 import NowCard from '../components/NowCard.jsx';
-import { groupSettled, formatUntil } from '../lib/next.js';
+import { groupSettled as dosesSettled, afterDoseOpen, formatUntil } from '../lib/next.js';
 import { effectiveWindow } from '../lib/meds.js';
 import { mergeWater, glassesOnDay } from '../lib/water.js';
 import WindowTimeline from '../components/WindowTimeline.jsx';
@@ -90,6 +89,13 @@ export default function RxHome() {
   const schedule = expectedDosesOnDay(crashMeds, crashDoses, day, now);
   const groups = groupByTime(schedule);
   const routines = new Map(routinesForDay(schedule, rxRoutineRuns, day, now).map((r) => [r.key, r]));
+  // Finished means the doses are settled AND nothing in their routines is
+  // still to do — a meal eaten after the dose keeps its group open until
+  // it's ticked.
+  // Only what comes after the dose, and only for a couple of hours: a meal
+  // skipped before it is history, and so is one after it by mid-afternoon.
+  const groupSettled = (entries) => dosesSettled(entries)
+    && entries.every((e) => !afterDoseOpen(routines.get(e.key), now));
   const tracking = kit.doseTracking !== false;
 
   // The heading picked out in the accent: the first time still waiting on
@@ -148,8 +154,12 @@ export default function RxHome() {
   return (
     <div className="app-page" style={{ paddingBottom: '7rem' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 20 }}>
-        <TopBar onAdd={() => navigate('/meds/new')} />
-        <WeekStrip day={day} today={shiftDay(now, 0)} onPick={(ts) => setOffset(daysBetween(shiftDay(now, 0), ts))} />
+        <Header
+          day={day}
+          today={shiftDay(now, 0)}
+          onPick={(ts) => setOffset(daysBetween(shiftDay(now, 0), ts))}
+          onAdd={() => navigate('/meds/new')}
+        />
       </div>
 
       <div style={{ padding: '0 1rem' }}>
@@ -158,7 +168,7 @@ export default function RxHome() {
           <button
             onClick={() => navigate('/crash/run')}
             style={{
-              width: '100%', borderRadius: '1rem', border: 'none', marginTop: '1.25rem',
+              width: '100%', borderRadius: '1rem', border: 'none', marginTop: '0.75rem',
               backgroundColor: 'var(--accent)', color: '#fff', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: '0.25rem', padding: '1.25rem',
@@ -175,7 +185,7 @@ export default function RxHome() {
 
         {/* ── The one thing to look at now ── */}
         {isToday && tracking && groups.length > 0 && (
-          <div style={{ marginTop: '1.25rem' }}>
+          <div style={{ marginTop: '0.75rem' }}>
             <NowCard
               meds={crashMeds}
               doses={crashDoses}
@@ -198,7 +208,7 @@ export default function RxHome() {
             key={med.id}
             onClick={() => navigate('/supply')}
             style={{
-              width: '100%', marginTop: '1.25rem', padding: '0.875rem 1rem', textAlign: 'left',
+              width: '100%', marginTop: '0.75rem', padding: '0.875rem 1rem', textAlign: 'left',
               borderRadius: '1rem', cursor: 'pointer',
               backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger)',
               display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -267,7 +277,7 @@ export default function RxHome() {
               onClick={() => setShowDone((v) => !v)}
               aria-expanded={showDone}
               style={{
-                width: '100%', marginTop: '1.25rem', padding: '0.75rem 1rem', borderRadius: '0.875rem',
+                width: '100%', marginTop: '0.75rem', padding: '0.75rem 1rem', borderRadius: '0.875rem',
                 cursor: 'pointer', backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'left',
               }}
@@ -286,15 +296,15 @@ export default function RxHome() {
 
         {tracking && (groups.length > 0 ? (
           groups.filter((g) => !isToday || showDone || !groupSettled(g.entries)).map((g) => (
-            <section key={g.key} style={{ marginTop: '1.5rem' }}>
+            <section key={g.key} style={{ marginTop: '1rem' }}>
               <h2 style={{
-                fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.02em',
+                fontSize: '1.125rem', fontWeight: 800, letterSpacing: '-0.01em',
                 color: g === currentGroup ? 'var(--accent-text)' : 'var(--text)',
-                margin: '0 0 0.75rem 0.5rem',
+                margin: '0 0 0.375rem 0.25rem',
               }}>
                 {g.label}
               </h2>
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
                 {g.entries.map((entry) => {
                   const routine = routines.get(entry.key);
                   return (
@@ -302,7 +312,8 @@ export default function RxHome() {
                       {/* On today only the routine in play is open; the rest
                           show up when their dose comes round. */}
                       {routine && (!isToday || g === currentGroup
-                        || routine.steps.some((st) => st.state === 'waiting')) && (
+                        || routine.steps.some((st) => st.state === 'waiting')
+                        || afterDoseOpen(routine, now)) && (
                         <RoutineCard
                           routine={routine}
                           when={when}
@@ -326,7 +337,7 @@ export default function RxHome() {
             </section>
           ))
         ) : isToday ? (
-          <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ marginTop: '1rem' }}>
             <EmptyToday
               onAdd={() => navigate('/meds/new')}
               onLogPlain={logPlain}
@@ -398,7 +409,7 @@ export default function RxHome() {
               </div>
             )}
 
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: '1rem' }}>
               <InstallCard />
             </div>
 
@@ -425,7 +436,7 @@ export default function RxHome() {
             )}
 
             {/* ── The tool, one tap away and no closer ── */}
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: '1rem' }}>
               <QuietRow
                 Icon={LifeBuoy}
                 label={active ? 'Back to the crash protocol' : 'I’m crashing'}
@@ -543,75 +554,29 @@ function groupByTime(schedule) {
 }
 
 /**
- * The navy bar: who's signed in, and the quickest way to add something.
+ * The header: the date and a + on one line, the week under it, in one navy
+ * block about a third the height of the old name bar and strip together. On a
+ * phone every line up here is a line of doses pushed off the bottom.
  *
  * It runs up under the status bar on an installed iPhone — the body is padded
  * by the safe area, and this pulls itself back up over that padding so the
  * colour reaches the top edge rather than stopping short of it.
  */
-function TopBar({ onAdd }) {
-  const { user } = useAuth();
-  const name = (user?.displayName || '').trim().split(/\s+/)[0] || 'Rx';
-  const initial = name.charAt(0).toUpperCase();
-
-  return (
-    <div style={{
-      backgroundColor: 'var(--header)',
-      marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-      paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
-      paddingBottom: '0.75rem', paddingLeft: '1rem', paddingRight: '0.5rem',
-      display: 'flex', alignItems: 'center', gap: '0.875rem',
-    }}>
-      {user?.photoURL ? (
-        <img
-          src={user.photoURL}
-          alt=""
-          referrerPolicy="no-referrer"
-          style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', objectFit: 'cover', flexShrink: 0 }}
-        />
-      ) : (
-        <span style={{
-          width: '2.75rem', height: '2.75rem', borderRadius: '9999px', flexShrink: 0,
-          backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.125rem', fontWeight: 700,
-        }}>
-          {initial}
-        </span>
-      )}
-      <span style={{ flex: 1, fontSize: '1.375rem', fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>
-        {name}
-      </span>
-      <button
-        onClick={onAdd}
-        aria-label="Add a medication"
-        style={{
-          width: '2.75rem', height: '2.75rem', background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-        }}
-      >
-        <Plus size={30} strokeWidth={1.75} />
-      </button>
-    </div>
-  );
-}
-
-/**
- * Sunday to Saturday around the chosen day. Swipe it sideways for the week
- * before or after; tap the date under it to come back to today.
- */
-function WeekStrip({ day, today, onPick }) {
+function Header({ day, today, onPick, onAdd }) {
   const touch = useRef(null);
   const sunday = shiftDay(day, -new Date(day).getDay());
   const days = Array.from({ length: 7 }, (_, i) => shiftDay(sunday, i));
   const isToday = day === today;
-
-  const label = new Date(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const weekday = new Date(day).toLocaleDateString(undefined, { weekday: 'long' });
+  const label = new Date(day).toLocaleDateString(undefined, { weekday: isToday ? undefined : 'short', month: 'short', day: 'numeric' });
 
   return (
     <div
-      style={{ backgroundColor: 'var(--surface)', padding: '0.75rem 0.5rem 0.875rem' }}
+      style={{
+        backgroundColor: 'var(--header)',
+        marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.375rem)',
+        paddingBottom: '0.5rem',
+      }}
       onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         if (touch.current == null) return;
@@ -620,7 +585,36 @@ function WeekStrip({ day, today, onPick }) {
         if (Math.abs(dx) > 50) onPick(shiftDay(day, dx < 0 ? 7 : -7));
       }}
     >
-      <div style={{ display: 'flex' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.5rem 0 1rem', minHeight: '2.5rem' }}>
+        <button
+          onClick={() => onPick(today)}
+          disabled={isToday}
+          style={{
+            flex: 1, textAlign: 'left', background: 'none', border: 'none', padding: 0,
+            cursor: isToday ? 'default' : 'pointer', color: '#fff',
+            fontSize: '1.125rem', fontWeight: 800, letterSpacing: '-0.01em',
+          }}
+        >
+          {isToday ? `Today, ${label}` : label}
+          {!isToday && (
+            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)', marginLeft: '0.5rem' }}>
+              ← Back to today
+            </span>
+          )}
+        </button>
+        <button
+          onClick={onAdd}
+          aria-label="Add a medication"
+          style={{
+            width: '2.5rem', height: '2.5rem', background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+          }}
+        >
+          <Plus size={24} strokeWidth={2} />
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', padding: '0 0.375rem' }}>
         {days.map((d) => {
           const selected = d === day;
           const current = d === today;
@@ -632,22 +626,19 @@ function WeekStrip({ day, today, onPick }) {
               aria-pressed={selected}
               style={{
                 flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.125rem',
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              <span style={{
-                fontSize: '0.9375rem', fontWeight: 500,
-                color: current ? 'var(--accent-text)' : 'var(--text)',
-              }}>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: current ? 'var(--accent-text)' : 'rgba(255,255,255,0.7)' }}>
                 {DAY_LETTERS[new Date(d).getDay()]}
               </span>
               <span style={{
-                width: '2.625rem', height: '2.625rem', borderRadius: '9999px',
+                width: '2rem', height: '2rem', borderRadius: '9999px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.25rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+                fontSize: '0.9375rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
                 backgroundColor: selected ? 'var(--accent)' : 'transparent',
-                color: selected ? '#fff' : current ? 'var(--accent-text)' : 'var(--text)',
+                color: selected ? '#fff' : current ? 'var(--accent-text)' : '#fff',
               }}>
                 {new Date(d).getDate()}
               </span>
@@ -655,22 +646,6 @@ function WeekStrip({ day, today, onPick }) {
           );
         })}
       </div>
-      <button
-        onClick={() => onPick(today)}
-        disabled={isToday}
-        style={{
-          display: 'block', margin: '0.625rem auto 0', background: 'none', border: 'none',
-          cursor: isToday ? 'default' : 'pointer', padding: '0.125rem 0.5rem',
-          fontSize: '1.125rem', fontWeight: 700, color: 'var(--accent-text)',
-        }}
-      >
-        {isToday ? `Today, ${label}` : `${weekday}, ${label}`}
-      </button>
-      {!isToday && (
-        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>
-          Tap to go back to today
-        </p>
-      )}
     </div>
   );
 }
@@ -754,17 +729,17 @@ function EmptyToday({ onAdd, onLogPlain, justLogged }) {
  */
 function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onToggle }) {
   const crash = !w ? '—'
-    : now < w.start ? `in ${formatUntil(w.start - now)}`
+    : now < w.start ? formatUntil(w.start - now)
       : now < w.end ? 'now' : 'passed';
   const tile = {
-    flex: 1, minWidth: 0, padding: '0.625rem 0.75rem', borderRadius: '0.875rem', textAlign: 'left',
+    flex: 1, minWidth: 0, padding: '0.5rem 0.625rem', borderRadius: '0.75rem', textAlign: 'left',
     backgroundColor: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer',
   };
   const label = { display: 'block', fontSize: '0.6875rem', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--muted)' };
-  const value = { display: 'block', fontSize: '1.0625rem', fontWeight: 800, color: 'var(--text)', marginTop: '0.125rem', fontVariantNumeric: 'tabular-nums' };
+  const value = { display: 'block', fontSize: '0.9375rem', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--text)', marginTop: '0.125rem', fontVariantNumeric: 'tabular-nums' };
 
   return (
-    <div style={{ marginTop: '1.25rem' }}>
+    <div style={{ marginTop: '0.75rem' }}>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {water.enabled && (
           <button onClick={onWater} style={{ ...tile, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
@@ -774,7 +749,7 @@ function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onT
               <span style={value}>{glasses}/{water.goal}</span>
             </span>
             <span style={{
-              width: '1.75rem', height: '1.75rem', borderRadius: '9999px', backgroundColor: 'var(--accent)',
+              width: '1.5rem', height: '1.5rem', borderRadius: '9999px', backgroundColor: 'var(--accent)',
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
               <Plus size={16} strokeWidth={3} />
