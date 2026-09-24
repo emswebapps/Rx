@@ -144,6 +144,27 @@ medication. But the step is marked *before the wait was up* and the routine
 doesn't count as followed. The check-offs live in `rxRoutineRuns`.
 `src/lib/routine.js` has the logic.
 
+### Today, at a glance
+
+The top of Today is one card with one clock (`src/lib/next.js`):
+- a running wait, as a live countdown
+- the routine step that's up next, one tap to check off ("Ate it — start the timer")
+- time until the next dose
+- time until the crash window
+- "all done"
+
+Finished dose times fold into a single "done earlier" line. Only the routine
+in play stays open. The check-in is one line that opens in a sheet. Water,
+crash and score are three small tiles, with the full cards under "More
+details".
+
+While a wait runs, a **silent notification stays pinned** with the time it
+ends. When the wait is up it's replaced by one that buzzes and stays until
+dealt with (`requireInteraction`, from the app and from the scheduler's
+push). Both are cleared once the dose is logged. A web notification can't
+tick, so the pin shows the end time rather than a live count. This is the
+one notification that carries a time. It never carries a name.
+
 ### Meals
 
 A routine step can be a **meal**: *2 eggs → wait 15 min → take*, or

@@ -505,6 +505,8 @@ test('a routine wait buzzes when it runs out, counted from when the step before 
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 40), TZ)), [WAIT_TAG]);
   const msg = collectCrashMessages(data, {}, localAt(7, 40), TZ).find((m) => m.tag === WAIT_TAG);
   assert.strictEqual(msg.title, 'Your wait is up');
+  // It stays on the lock screen until dealt with — the one not to miss.
+  assert.strictEqual(msg.requireInteraction, true);
   // Not again once sent, and not an hour later.
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, { [WAIT_TAG]: 1 }, localAt(7, 45), TZ)), []);
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(8, 45), TZ)), []);

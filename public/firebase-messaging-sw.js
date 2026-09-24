@@ -35,6 +35,9 @@ messaging.onBackgroundMessage((payload) => {
     badge: '/Rx/icon-192.png',
     tag: payload.data?.tag || 'rx-notification',
     renotify: true,
+    // A routine's "wait is up" stays until it's dealt with.
+    requireInteraction: payload.data?.pin === '1',
+    vibrate: payload.data?.pin === '1' ? [250, 120, 250, 120, 250] : undefined,
     actions,
     data: payload.data,
   });

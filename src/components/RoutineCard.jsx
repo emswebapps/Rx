@@ -98,7 +98,9 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAt
               <p
                 aria-live="polite"
                 style={{
-                  fontSize: '2rem', fontWeight: 800, lineHeight: 1.05, color: 'var(--accent-text)',
+                  // The big countdown lives at the top of Today; this is the
+                  // same clock, in its place in the routine.
+                  fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.1, color: 'var(--accent-text)',
                   fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
                 }}
               >

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pill, LifeBuoy, Check, Package, Plus } from 'lucide-react';
+import { Pill, LifeBuoy, Check, Package, Plus, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useNow } from '../lib/useCountdown.js';
@@ -17,6 +17,10 @@ import ScheduleRow, { DoseSheet, TimeEditor, MedNotesSheet } from '../components
 import { notesForMed } from '../lib/notes.js';
 import { checkInsDue } from '../lib/effects.js';
 import EffectCheckIn from '../components/EffectCheckIn.jsx';
+import NowCard from '../components/NowCard.jsx';
+import { groupSettled, formatUntil } from '../lib/next.js';
+import { effectiveWindow } from '../lib/meds.js';
+import { mergeWater, glassesOnDay } from '../lib/water.js';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
@@ -56,6 +60,10 @@ export default function RxHome() {
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
+  // What's folded away: finished dose times, and the details under the tiles.
+  const [showDone, setShowDone] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(null);
   const [notesFor, setNotesFor] = useState(null);
   const noteCount = (med) => notesForMed(rxNotes, med.id).length + (med.rules || []).filter((r) => String(r?.text || '').trim()).length;
   const navigate = useNavigate();
@@ -165,6 +173,22 @@ export default function RxHome() {
           </button>
         )}
 
+        {/* ── The one thing to look at now ── */}
+        {isToday && tracking && groups.length > 0 && (
+          <div style={{ marginTop: '1.25rem' }}>
+            <NowCard
+              meds={crashMeds}
+              doses={crashDoses}
+              runs={rxRoutineRuns}
+              kit={kit}
+              onStep={(entry, stepId) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now())}
+              onOpenDose={(key) => setOpenKey(key)}
+              onCrash={() => navigate('/crash')}
+              onCheckIn={() => checkInCrash()}
+            />
+          </div>
+        )}
+
         {/* ── Running out before the refill ──
             Above the doses, because it's the one supply problem with a
             deadline: the fix is a phone call that has to happen before the
@@ -199,22 +223,69 @@ export default function RxHome() {
         {isToday && tracking && (() => {
           const due = checkInsDue(crashMeds, crashDoses, rxEffects, now)[0];
           if (!due) return null;
+          // One line, not the whole form: it's a prompt, not the point of
+          // the screen. Tapping opens the form in a sheet.
           return (
-            <div style={{ marginTop: '1.25rem' }}>
-              <EffectCheckIn
-                key={`${due.doseId}:${due.phase}`}
-                title={due.label}
-                subtitle={`${due.med.name || 'Your dose'} · taken ${formatClock(crashDoses.find((d) => d.id === due.doseId)?.takenAt ?? due.at)}`}
-                onSave={(v) => addEffect({ ...v, doseId: due.doseId, medId: due.medId, phase: due.phase })}
-                onDismiss={() => addEffect({ doseId: due.doseId, medId: due.medId, phase: due.phase, dismissed: true })}
-              />
+            <div style={{
+              marginTop: '0.75rem', padding: '0.625rem 0.75rem 0.625rem 1rem', borderRadius: '0.875rem',
+              backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+            }}>
+              <button
+                onClick={() => setCheckInOpen(due)}
+                style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>{due.label}</span>
+                <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--subtle)' }}>
+                  {due.med.name || 'Your dose'} · a few taps
+                </span>
+              </button>
+              <button onClick={() => setCheckInOpen(due)} className="app-btn-primary" style={{ width: 'auto', flex: 'none', padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
+                Check in
+              </button>
+              <button
+                onClick={() => addEffect({ doseId: due.doseId, medId: due.medId, phase: due.phase, dismissed: true })}
+                aria-label="Not now"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '0.375rem' }}
+              >
+                <X size={16} />
+              </button>
             </div>
           );
         })()}
 
         {/* ── The doses, by the time they're due ── */}
+        {/* Finished dose times fold into one line on today — the screen is
+            for what's left, not a record of what's done. */}
+        {isToday && tracking && (() => {
+          const done = groups.filter((g) => groupSettled(g.entries));
+          if (done.length === 0) return null;
+          const entries = done.flatMap((g) => g.entries);
+          const taken = entries.filter((e) => e.state === 'taken').length;
+          return (
+            <button
+              onClick={() => setShowDone((v) => !v)}
+              aria-expanded={showDone}
+              style={{
+                width: '100%', marginTop: '1.25rem', padding: '0.75rem 1rem', borderRadius: '0.875rem',
+                cursor: 'pointer', backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'left',
+              }}
+            >
+              <Check size={16} style={{ color: 'var(--positive)', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
+                {taken} of {entries.length} done earlier
+                <span style={{ fontWeight: 400, color: 'var(--subtle)' }}>
+                  {' · '}{entries.map((e) => (e.dose ? formatClock(e.dose.takenAt) : e.state === 'skipped' ? 'missed' : 'skipped')).join(', ')}
+                </span>
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)' }}>{showDone ? 'Hide' : 'Show'}</span>
+            </button>
+          );
+        })()}
+
         {tracking && (groups.length > 0 ? (
-          groups.map((g) => (
+          groups.filter((g) => !isToday || showDone || !groupSettled(g.entries)).map((g) => (
             <section key={g.key} style={{ marginTop: '1.5rem' }}>
               <h2 style={{
                 fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.02em',
@@ -228,7 +299,10 @@ export default function RxHome() {
                   const routine = routines.get(entry.key);
                   return (
                     <div key={entry.key} style={{ display: 'grid', gap: '0.5rem' }}>
-                      {routine && (
+                      {/* On today only the routine in play is open; the rest
+                          show up when their dose comes round. */}
+                      {routine && (!isToday || g === currentGroup
+                        || routine.steps.some((st) => st.state === 'waiting')) && (
                         <RoutineCard
                           routine={routine}
                           when={when}
@@ -273,8 +347,23 @@ export default function RxHome() {
                 morning — but above everything else, because until Rx is
                 installed its dose reminders cannot reach a lock screen at all
                 on iOS. */}
+            {/* ── At a glance ── three small tiles instead of three cards;
+                the details are one tap away under "More". */}
             {tracking && (
-              <div style={{ marginTop: '1.25rem' }}>
+              <GlanceTiles
+                water={mergeWater(kit.water)}
+                glasses={glassesOnDay(rxWater, now).length}
+                onWater={() => addWater()}
+                window={effectiveWindow(crashMeds, crashDoses, kit, now)}
+                score={todayCompliance?.score ?? null}
+                now={now}
+                open={showMore}
+                onToggle={() => setShowMore((v) => !v)}
+              />
+            )}
+
+            {tracking && showMore && (
+              <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
                 <WaterRow
                   log={rxWater}
                   doses={crashDoses}
@@ -283,6 +372,29 @@ export default function RxHome() {
                   onAdd={() => addWater()}
                   onUndo={() => undoWater()}
                 />
+                <WindowTimeline
+                  meds={crashMeds}
+                  doses={crashDoses}
+                  kit={kit}
+                  now={now}
+                  behaviors={crashBehaviors}
+                  sessions={crashSessions}
+                  onCheckIn={() => checkInCrash()}
+                />
+                {todayCompliance && todayCompliance.score != null && (
+                  <ComplianceCard day={todayCompliance} summary={complianceWeek} onOpen={() => navigate('/history?tab=score')} />
+                )}
+                {adherence && (
+                  <button
+                    onClick={() => navigate('/history')}
+                    style={{
+                      width: '100%', padding: '0.25rem 0.5rem', textAlign: 'left', background: 'none', border: 'none',
+                      cursor: 'pointer', fontSize: '0.9375rem', fontWeight: 600, color: 'var(--subtle)',
+                    }}
+                  >
+                    {adherence}
+                  </button>
+                )}
               </div>
             )}
 
@@ -312,40 +424,6 @@ export default function RxHome() {
               </button>
             )}
 
-            {/* ── Tonight ── */}
-            {tracking && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <WindowTimeline
-                  meds={crashMeds}
-                  doses={crashDoses}
-                  kit={kit}
-                  now={now}
-                  behaviors={crashBehaviors}
-                  sessions={crashSessions}
-                  onCheckIn={() => checkInCrash()}
-                />
-              </div>
-            )}
-
-            {/* ── How it's been going ── */}
-            {tracking && todayCompliance && todayCompliance.score != null && (
-              <div style={{ marginTop: '1rem' }}>
-                <ComplianceCard day={todayCompliance} summary={complianceWeek} onOpen={() => navigate('/history?tab=score')} />
-              </div>
-            )}
-            {adherence && (
-              <button
-                onClick={() => navigate('/history')}
-                style={{
-                  width: '100%', marginTop: '1rem', padding: '0.875rem 0.5rem', textAlign: 'left',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: '0.9375rem', fontWeight: 600, color: 'var(--subtle)',
-                }}
-              >
-                {adherence}
-              </button>
-            )}
-
             {/* ── The tool, one tap away and no closer ── */}
             <div style={{ marginTop: '1.5rem' }}>
               <QuietRow
@@ -372,6 +450,19 @@ export default function RxHome() {
           onOpenMed={(medId) => navigate(`/meds/${medId}`)}
           onCheckIn={isToday ? (medId) => { setOpenKey(null); setManualCheckIn(medId); } : null}
         />
+      )}
+
+      {checkInOpen && (
+        <Sheet onClose={() => setCheckInOpen(null)} label="Check in">
+          <EffectCheckIn
+            title={checkInOpen.label}
+            subtitle={`${checkInOpen.med.name || 'Your dose'} · taken ${formatClock(crashDoses.find((d) => d.id === checkInOpen.doseId)?.takenAt ?? checkInOpen.at)}`}
+            onSave={(v) => {
+              addEffect({ ...v, doseId: checkInOpen.doseId, medId: checkInOpen.medId, phase: checkInOpen.phase });
+              setCheckInOpen(null);
+            }}
+          />
+        </Sheet>
       )}
 
       {manualCheckIn && (
@@ -656,3 +747,60 @@ function EmptyToday({ onAdd, onLogPlain, justLogged }) {
     </div>
   );
 }
+
+/**
+ * Water, the crash, and the score, as three small tiles. Water's + logs a
+ * glass straight from here; the other two open the details underneath.
+ */
+function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onToggle }) {
+  const crash = !w ? '—'
+    : now < w.start ? `in ${formatUntil(w.start - now)}`
+      : now < w.end ? 'now' : 'passed';
+  const tile = {
+    flex: 1, minWidth: 0, padding: '0.625rem 0.75rem', borderRadius: '0.875rem', textAlign: 'left',
+    backgroundColor: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer',
+  };
+  const label = { display: 'block', fontSize: '0.6875rem', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--muted)' };
+  const value = { display: 'block', fontSize: '1.0625rem', fontWeight: 800, color: 'var(--text)', marginTop: '0.125rem', fontVariantNumeric: 'tabular-nums' };
+
+  return (
+    <div style={{ marginTop: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        {water.enabled && (
+          <button onClick={onWater} style={{ ...tile, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            aria-label={`Water ${glasses} of ${water.goal}. Tap to log a glass.`}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={label}>WATER</span>
+              <span style={value}>{glasses}/{water.goal}</span>
+            </span>
+            <span style={{
+              width: '1.75rem', height: '1.75rem', borderRadius: '9999px', backgroundColor: 'var(--accent)',
+              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Plus size={16} strokeWidth={3} />
+            </span>
+          </button>
+        )}
+        <button onClick={onToggle} style={tile}>
+          <span style={label}>CRASH</span>
+          <span style={{ ...value, color: crash === 'now' ? 'var(--warn)' : 'var(--text)' }}>{crash}</span>
+        </button>
+        <button onClick={onToggle} style={tile}>
+          <span style={label}>SCORE</span>
+          <span style={value}>{score ?? '—'}</span>
+        </button>
+      </div>
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        style={{
+          display: 'block', margin: '0.5rem auto 0', background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)', padding: '0.25rem 0.5rem',
+        }}
+      >
+        {open ? 'Less' : 'More details'}
+      </button>
+    </div>
+  );
+}
+
