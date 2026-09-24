@@ -247,13 +247,17 @@ const sheetHeading = {
  * `when` says which day the sheet is for. A day still to come can't be logged —
  * there is nothing to record yet — so it offers only the medication itself.
  */
-export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed }) {
+export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn }) {
   const { med, state, expectedAt, amount, dose, entry: logged } = entry;
   const rules = rulesForMed(med);
   const status = statusText(entry);
   const tone = STATUS[state] || STATUS.unknown;
   const future = when === 'future';
   const settled = state === 'taken' || state === 'skipped-on-purpose';
+  // Take asks when, rather than stamping the moment the button was pressed —
+  // the dose was often swallowed a few minutes before the phone came out, and
+  // with "next dose when this wears off" that difference moves the whole day.
+  const [picking, setPicking] = useState(false);
 
   return (
     <Sheet onClose={onClose} label={med.name || 'Dose'}>
@@ -309,12 +313,20 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         </p>
       ) : null}
 
+      {picking ? (
+        <TakeTimePicker
+          today={when === 'today'}
+          fallback={expectedAt}
+          onCancel={() => setPicking(false)}
+          onConfirm={(at) => onTake(entry, at)}
+        />
+      ) : (
       <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1.5rem' }}>
         {!future && !settled && (
           <RoundAction Icon={SkipForward} label="Skip" onClick={() => onSkip(entry)} />
         )}
         {!future && !settled && (
-          <RoundAction Icon={Check} label="Take" primary onClick={() => onTake(entry)} />
+          <RoundAction Icon={Check} label="Take" primary onClick={() => setPicking(true)} />
         )}
         {state === 'taken' && dose && (
           <RoundAction Icon={Clock} label="Change time" onClick={() => onChangeTime(dose)} />
@@ -324,7 +336,93 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         )}
         <RoundAction Icon={Info} label="Medication" onClick={() => onOpenMed(med.id)} />
       </div>
+      )}
+
+      {!picking && onCheckIn && state === 'taken' && (
+        <button
+          onClick={() => onCheckIn(med.id)}
+          style={{
+            display: 'block', margin: '1.25rem auto 0', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.9375rem', fontWeight: 700, color: 'var(--accent-text)',
+          }}
+        >
+          How’s it working? Check in
+        </button>
+      )}
     </Sheet>
+  );
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const hhmm = (ts) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+
+/**
+ * "What time did you take it?" — now, a few minutes ago, or any time.
+ *
+ * On today it starts at now; on a past day at the time it was due, since the
+ * point there is filling in a day already gone. A time later than now on
+ * today means this morning, not tonight — the same rule as TimeEditor.
+ */
+function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
+  const start = today ? Date.now() : (fallback ?? Date.now());
+  const [value, setValue] = useState(hhmm(start));
+
+  const resolve = () => {
+    const [h, m] = value.split(':').map(Number);
+    const d = new Date(start);
+    if (!Number.isNaN(h) && !Number.isNaN(m)) d.setHours(h, m, 0, 0);
+    if (today && d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  };
+  const ago = (min) => setValue(hhmm(Date.now() - min * 60 * 1000));
+
+  return (
+    <div style={{ marginTop: '1.25rem' }}>
+      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.625rem' }}>
+        What time did you take it?
+      </p>
+      <input
+        type="time"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="app-input"
+        style={{ width: '100%', fontSize: '1.375rem', fontWeight: 700, textAlign: 'center' }}
+        aria-label="Time taken"
+      />
+      {today && (
+        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.625rem' }}>
+          {[['Now', 0], ['5 min ago', 5], ['15 min ago', 15], ['30 min ago', 30]].map(([label, min]) => (
+            <button
+              key={label}
+              onClick={() => ago(min)}
+              style={{
+                flex: 1, padding: '0.5rem 0.25rem', borderRadius: '0.625rem', cursor: 'pointer',
+                backgroundColor: value === hhmm(Date.now() - min * 60 * 1000) ? 'var(--accent-soft)' : 'var(--surface2)',
+                border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8125rem', fontWeight: 700,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '0.875rem 1.125rem', borderRadius: '0.75rem', cursor: 'pointer',
+            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '0.9375rem', fontWeight: 700,
+          }}
+        >
+          Back
+        </button>
+        <button onClick={() => onConfirm(resolve())} className="app-btn-primary" style={{ flex: 1, fontSize: '1rem' }}>
+          <Check size={17} style={{ verticalAlign: '-3px', marginRight: '0.375rem' }} />
+          Log it
+        </button>
+      </div>
+    </div>
   );
 }
 

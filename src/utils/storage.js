@@ -26,6 +26,7 @@ const KEYS = {
   ROUTINE_RUNS: 'rx_routine_runs',
   WATER: 'rx_water',
   CLIENT_SENT: 'rx_client_sent',
+  EFFECTS: 'rx_effects',
 };
 
 function get(key) {
@@ -66,7 +67,7 @@ export const storage = {
       crash: {
         timerEnd: true, windowHeadsUp: true, escrowOpened: true, crashNote: true,
         doseDue: true, ruleReminders: true, refillLow: true,
-        routineWait: true, water: true, supplyGap: true,
+        routineWait: true, water: true, supplyGap: true, effectCheckIn: true,
         // Off until asked for: a second buzz about a dose whose moment has
         // already passed is mostly guilt.
         doseLate: false,
@@ -98,6 +99,8 @@ export const storage = {
   setWater: (v) => set(KEYS.WATER, v),
   getClientSent: () => get(KEYS.CLIENT_SENT) || {},
   setClientSent: (v) => set(KEYS.CLIENT_SENT, v),
+  getEffects: () => get(KEYS.EFFECTS) || [],
+  setEffects: (v) => set(KEYS.EFFECTS, v),
 };
 
 // The Firestore field names, which are also the localStorage slices. One list,
@@ -121,4 +124,6 @@ export const CLOUD_FIELDS = {
   // reads it as "already sent", so a buzz the app fired on the second isn't
   // repeated by the next server tick.
   rxClientSent: [storage.getClientSent, storage.setClientSent],
+  // Focus / mood / appetite / side-effect check-ins — see lib/effects.js.
+  rxEffects: [storage.getEffects, storage.setEffects],
 };

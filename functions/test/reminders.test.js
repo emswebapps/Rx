@@ -230,6 +230,9 @@ const IR = {
 const ALL_ON = {
   timerEnd: true, windowHeadsUp: true, escrowOpened: true, crashNote: true,
   doseDue: true, ruleReminders: true, refillLow: true,
+  // Off here so the regimen tests below keep asserting exact lists; the
+  // check-in tests at the bottom, and the privacy sweep, switch it on.
+  effectCheckIn: false,
 };
 
 const withRegimen = (over = {}) => ({
@@ -443,7 +446,7 @@ test('no medication notification ever names the medication', () => {
   // Every optional nudge is switched ON here, whatever its default. A message
   // kind that is off by default is exactly the one that would otherwise slip
   // past this sweep and ship unread.
-  const everything = { crash: { ...ALL_ON, doseLate: true, routineWait: true, water: true } };
+  const everything = { crash: { ...ALL_ON, doseLate: true, routineWait: true, water: true, effectCheckIn: true } };
   const days = [
     withRegimen({ ...lowSupply, ...routineAndWater, crashDoses: [], notifPrefs: everything }),
     withRegimen({ ...lowSupply, ...routineAndWater, notifPrefs: everything }),
@@ -473,7 +476,7 @@ test('no medication notification ever names the medication', () => {
     'crash-dose-ir-t1', 'crash-dose-xr-t1', 'crash-escrow', 'crash-late-ir-t1',
     'crash-late-xr-t1', 'crash-note', 'crash-refill-xr', 'crash-rule-xr-eat',
     'crash-window-d-xr', 'rx-wait-2026-07-26_xr_t1-w', 'rx-water',
-    'crash-short-ir', 'crash-short-soon-ir',
+    'crash-short-ir', 'crash-short-soon-ir', 'rx-effect-d-xr-working', 'rx-effect-d-xr-wearing',
   ].sort());
 });
 
@@ -588,4 +591,23 @@ test('quiet when the supply reaches the refill date, or the pref is off', () => 
     crashDoses: [], notifPrefs: { crash: { ...ALL_ON, supplyGap: false } },
   });
   assert.deepStrictEqual(shortTags(collectCrashMessages(off, {}, localAt(7), TZ)), []);
+});
+
+// ── How's it working? ───────────────────────────────────────────────────────
+
+const effectTags = (msgs) => tags(msgs).filter((t) => t.startsWith('rx-effect'));
+
+test('a check-in is asked for ninety minutes in and at wear-off, once each', () => {
+  const data = withRegimen({ crashMeds: [XR], notifPrefs: { crash: { ...ALL_ON, effectCheckIn: true } } }); // XR taken 08:00, wears off at 9h
+  assert.deepStrictEqual(effectTags(collectCrashMessages(data, {}, localAt(9, 20), TZ)), []);
+  assert.deepStrictEqual(effectTags(collectCrashMessages(data, {}, localAt(9, 35), TZ)), ['rx-effect-d-xr-working']);
+  assert.deepStrictEqual(effectTags(collectCrashMessages(data, {}, localAt(17, 10), TZ)), ['rx-effect-d-xr-wearing']);
+  assert.deepStrictEqual(effectTags(collectCrashMessages(data, {}, localAt(11), TZ)), []);
+});
+
+test('answered, dismissed, or switched off, it stays quiet', () => {
+  const answered = withRegimen({ crashMeds: [XR], notifPrefs: { crash: { ...ALL_ON, effectCheckIn: true } }, rxEffects: [{ doseId: 'd-xr', phase: 'working', dismissed: true }] });
+  assert.deepStrictEqual(effectTags(collectCrashMessages(answered, {}, localAt(9, 35), TZ)), []);
+  const off = withRegimen({ crashMeds: [XR], notifPrefs: { crash: { ...ALL_ON, effectCheckIn: false } } });
+  assert.deepStrictEqual(effectTags(collectCrashMessages(off, {}, localAt(9, 35), TZ)), []);
 });

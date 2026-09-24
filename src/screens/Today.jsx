@@ -15,9 +15,12 @@ import { complianceDays, complianceSummary } from '../lib/compliance.js';
 import { formatClock } from '../lib/time.js';
 import ScheduleRow, { DoseSheet, TimeEditor, MedNotesSheet } from '../components/ScheduleRow.jsx';
 import { notesForMed } from '../lib/notes.js';
+import { checkInsDue } from '../lib/effects.js';
+import EffectCheckIn from '../components/EffectCheckIn.jsx';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
+import Sheet from '../components/Sheet.jsx';
 import { formatRunOut } from '../components/medsUi.jsx';
 import RoutineCard from '../components/RoutineCard.jsx';
 import WaterRow from '../components/WaterRow.jsx';
@@ -49,8 +52,10 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, rxWater, addWater, undoWater,
-    rxNotes, addRxNote,
+    rxNotes, addRxNote, rxEffects, addEffect,
   } = useApp();
+  // A check-in started by hand from the dose sheet, for one medication.
+  const [manualCheckIn, setManualCheckIn] = useState(null);
   const [notesFor, setNotesFor] = useState(null);
   const noteCount = (med) => notesForMed(rxNotes, med.id).length + (med.rules || []).filter((r) => String(r?.text || '').trim()).length;
   const navigate = useNavigate();
@@ -110,8 +115,8 @@ export default function RxHome() {
     return e.expectedAt ?? shiftDay(day, 0) + 12 * 60 * 60 * 1000;
   };
 
-  const take = (e) => {
-    logCrashDose(e.medId, loggedAt(e), { slotId: e.slotId, amount: e.amount });
+  const take = (e, at) => {
+    logCrashDose(e.medId, at ?? loggedAt(e), { slotId: e.slotId, amount: e.amount });
     setOpenKey(null);
   };
   const skip = (e) => {
@@ -187,6 +192,25 @@ export default function RxHome() {
             </span>
           </button>
         ))}
+
+        {/* ── How's it working? ──
+            Only the newest one open; an older one still unanswered is
+            already stale by the time the next is due. */}
+        {isToday && tracking && (() => {
+          const due = checkInsDue(crashMeds, crashDoses, rxEffects, now)[0];
+          if (!due) return null;
+          return (
+            <div style={{ marginTop: '1.25rem' }}>
+              <EffectCheckIn
+                key={`${due.doseId}:${due.phase}`}
+                title={due.label}
+                subtitle={`${due.med.name || 'Your dose'} · taken ${formatClock(crashDoses.find((d) => d.id === due.doseId)?.takenAt ?? due.at)}`}
+                onSave={(v) => addEffect({ ...v, doseId: due.doseId, medId: due.medId, phase: due.phase })}
+                onDismiss={() => addEffect({ doseId: due.doseId, medId: due.medId, phase: due.phase, dismissed: true })}
+              />
+            </div>
+          );
+        })()}
 
         {/* ── The doses, by the time they're due ── */}
         {tracking && (groups.length > 0 ? (
@@ -345,7 +369,18 @@ export default function RxHome() {
           onUndo={undo}
           onChangeTime={(dose) => { setOpenKey(null); setEditingDose(dose.id); }}
           onOpenMed={(medId) => navigate(`/meds/${medId}`)}
+          onCheckIn={isToday ? (medId) => { setOpenKey(null); setManualCheckIn(medId); } : null}
         />
+      )}
+
+      {manualCheckIn && (
+        <Sheet onClose={() => setManualCheckIn(null)} label="Check in">
+          <EffectCheckIn
+            title="How’s it working?"
+            subtitle={crashMeds.find((m) => m.id === manualCheckIn)?.name}
+            onSave={(v) => { addEffect({ ...v, medId: manualCheckIn }); setManualCheckIn(null); }}
+          />
+        </Sheet>
       )}
 
       {notesFor && (() => {

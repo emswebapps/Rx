@@ -1,7 +1,8 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import DoseHistory from './DoseHistory.jsx';
 import ComplianceHistory from './ComplianceHistory.jsx';
+import EffectsHistory from './EffectsHistory.jsx';
 import { Segmented, pageStyle } from '../components/medsUi.jsx';
 import { summarize, historySentence, rankMoves } from '../lib/stats.js';
 import { formatClock } from '../lib/time.js';
@@ -247,7 +248,8 @@ function SessionsHistory() {
  */
 export default function HistoryView() {
   const [params, setParams] = useSearchParams();
-  const tab = ['sessions', 'score'].includes(params.get('tab')) ? params.get('tab') : 'doses';
+  const navigate = useNavigate();
+  const tab = ['sessions', 'score', 'effects'].includes(params.get('tab')) ? params.get('tab') : 'doses';
 
   return (
     <div className="app-page" style={pageStyle}>
@@ -257,11 +259,18 @@ export default function HistoryView() {
       }}>
         History
       </h1>
+      <button onClick={() => navigate('/report')} style={{
+        display: 'block', marginTop: '-0.75rem', marginBottom: '1rem', padding: 0, background: 'none', border: 'none',
+        cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700, color: 'var(--accent-text)',
+      }}>
+        Doctor visit report →
+      </button>
 
       <Segmented
         options={[
           { key: 'doses', label: 'Doses' },
           { key: 'score', label: 'Score' },
+          { key: 'effects', label: 'Effects' },
           { key: 'sessions', label: 'Crashes' },
         ]}
         value={tab}
@@ -269,7 +278,9 @@ export default function HistoryView() {
         style={{ marginBottom: '1.5rem' }}
       />
 
-      {tab === 'doses' ? <DoseHistory /> : tab === 'score' ? <ComplianceHistory /> : <SessionsHistory />}
+      {tab === 'doses' ? <DoseHistory />
+        : tab === 'score' ? <ComplianceHistory />
+          : tab === 'effects' ? <EffectsHistory /> : <SessionsHistory />}
     </div>
   );
 }

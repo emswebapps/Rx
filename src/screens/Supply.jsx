@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Package, AlertTriangle, CalendarClock, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNow } from '../lib/useCountdown.js';
-import { activeMeds, supplyStatus, formatAmount } from '../lib/meds.js';
+import {
+  activeMeds, supplyStatus, formatAmount, countMismatches, formatCountDiff,
+} from '../lib/meds.js';
+import { formatDayRelative } from '../lib/time.js';
 import { SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 
 /**
@@ -28,7 +31,11 @@ function urgency(status) {
 }
 
 export default function SupplyView({ onBack }) {
-  const { crashMeds, crashDoses, refillCrashMed } = useApp();
+  const { crashMeds, crashDoses, refillCrashMed, recordPillCount } = useApp();
+  // The count check: which med, what was typed, and — once compared — the result.
+  const [counting, setCounting] = useState(null);
+  const [counted, setCounted] = useState('');
+  const [countResult, setCountResult] = useState(null);
   const navigate = useNavigate();
   const now = useNow({ tick: 60_000, syncKey: `${crashMeds.length}:${crashDoses.length}` });
   const [filling, setFilling] = useState(null);
@@ -131,6 +138,99 @@ export default function SupplyView({ onBack }) {
                 </button>
               )}
 
+              {status.tracked && (() => {
+                const last = countMismatches(med)[0];
+                return last ? (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.5rem' }}>
+                    Last count {formatCountDiff(last.diff)}, {(() => { const r = formatDayRelative(last.at, now); return r === 'Today' || r === 'Yesterday' ? r.toLowerCase() : r; })()}
+                  </p>
+                ) : null;
+              })()}
+
+              {counting === med.id && (
+                <div style={{
+                  marginTop: '0.875rem', padding: '0.75rem', borderRadius: '0.75rem',
+                  backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+                }}>
+                  {countResult == null ? (
+                    <>
+                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                        How many are in the bottle right now?
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="number" min="0" inputMode="numeric" autoFocus
+                          value={counted}
+                          onChange={(e) => setCounted(e.target.value)}
+                          placeholder="Count them"
+                          className="app-input" style={{ flex: 1 }}
+                        />
+                        <button
+                          onClick={() => {
+                            const n = Number(counted);
+                            if (counted === '' || Number.isNaN(n)) return;
+                            const diff = n - status.onHand;
+                            if (diff === 0) {
+                              recordPillCount(med.id, n, true);
+                              setCountResult({ diff: 0, n });
+                            } else {
+                              setCountResult({ diff, n });
+                            }
+                          }}
+                          className="app-btn-primary"
+                          style={{ flexShrink: 0, opacity: counted === '' ? 0.5 : 1 }}
+                        >
+                          Check
+                        </button>
+                      </div>
+                    </>
+                  ) : countResult.diff === 0 ? (
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--positive-text)' }}>
+                      <Check size={16} /> Matches — {countResult.n} in the bottle, just as logged.
+                    </p>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--warn)' }}>
+                        {formatCountDiff(countResult.diff)}: the app expected {status.onHand}, you counted {countResult.n}.
+                      </p>
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', lineHeight: 1.45, marginTop: '0.25rem' }}>
+                        {countResult.diff < 0
+                          ? 'Often a dose taken but not logged — or pills lost or dropped.'
+                          : 'Often a dose logged that wasn’t actually taken.'}
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.625rem' }}>
+                        <button
+                          onClick={() => { recordPillCount(med.id, countResult.n, true); setCounting(null); }}
+                          className="app-btn-primary" style={{ flex: 1 }}
+                        >
+                          Use my count
+                        </button>
+                        <button
+                          onClick={() => { recordPillCount(med.id, countResult.n, false); setCounting(null); }}
+                          style={{
+                            flex: 1, borderRadius: '0.75rem', cursor: 'pointer', backgroundColor: 'var(--surface)',
+                            border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.875rem', fontWeight: 700,
+                          }}
+                        >
+                          Keep {status.onHand}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {(countResult == null || countResult.diff === 0) && (
+                    <button
+                      onClick={() => setCounting(null)}
+                      style={{
+                        marginTop: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        fontSize: '0.8125rem', fontWeight: 600, color: 'var(--muted)',
+                      }}
+                    >
+                      {countResult ? 'Done' : 'Cancel'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {filling === med.id ? (
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem' }}>
                   <input
@@ -160,6 +260,7 @@ export default function SupplyView({ onBack }) {
                   </button>
                 </div>
               ) : (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   onClick={() => { setFilling(med.id); setCount(''); }}
                   style={{
@@ -170,6 +271,19 @@ export default function SupplyView({ onBack }) {
                 >
                   I filled this
                 </button>
+                {status.tracked && counting !== med.id && (
+                  <button
+                    onClick={() => { setCounting(med.id); setCounted(''); setCountResult(null); }}
+                    style={{
+                      marginTop: '0.875rem', padding: '0.5rem 0.875rem', borderRadius: '0.75rem',
+                      cursor: 'pointer', backgroundColor: 'var(--surface2)', color: 'var(--text)',
+                      border: '1px solid var(--border)', fontSize: '0.8125rem', fontWeight: 700,
+                    }}
+                  >
+                    Count check
+                  </button>
+                )}
+                </div>
               )}
             </div>
           ))}

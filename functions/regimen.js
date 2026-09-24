@@ -250,6 +250,7 @@ function expectedDosesToday(meds, doses, now, tz) {
       expectedAt: resolveTime(med, t, 0),
     }));
     const bySlot = matchEntriesToSlots(slots, entriesForMedOnDay(med.id, doses, now, tz));
+    chainSlots(med, slots, bySlot, tz);
 
     for (const slot of slots) {
       const entry = bySlot.get(slot.id) || null;
@@ -275,6 +276,43 @@ function expectedDosesToday(meds, doses, now, tz) {
 
   return out.sort((a, b) => (a.expectedAt == null ? Infinity : a.expectedAt)
     - (b.expectedAt == null ? Infinity : b.expectedAt));
+}
+
+const SPACING_MATCH_MS = 30 * MINUTE_MS;
+
+/** See doseSpacing in src/lib/meds.js. */
+function doseSpacing(med, tz) {
+  const m = normalizeMed(med);
+  if (m.spacing === 'clock' || m.spacing === 'wearOff') return m.spacing;
+  const times = m.schedule.times;
+  if (times.length < 2 || times.some((t) => t.mode !== 'clock')) return 'clock';
+  // Wall-clock gaps only, so any fixed day and zone gives the same answer.
+  const mins = times.map((t) => {
+    const x = /^(\d{1,2}):(\d{2})$/.exec(String(t.time || '').trim());
+    return x ? Number(x[1]) * 60 + Number(x[2]) : null;
+  });
+  if (mins.some((x) => x == null)) return 'clock';
+  const gap = m.onsetHours * HOUR_MS;
+  for (let i = 1; i < mins.length; i += 1) {
+    if (Math.abs((mins[i] - mins[i - 1]) * MINUTE_MS - gap) > SPACING_MATCH_MS) return 'clock';
+  }
+  return 'wearOff';
+}
+
+/** See chainSlots in src/lib/meds.js. */
+function chainSlots(med, slots, bySlot, tz) {
+  if (doseSpacing(med, tz) !== 'wearOff') return;
+  const gap = med.onsetHours * HOUR_MS;
+  for (let i = 1; i < slots.length; i += 1) {
+    const slot = slots[i];
+    if (slot.mode !== 'clock') continue;
+    const prev = slots[i - 1];
+    const prevEntry = bySlot.get(prev.id);
+    const base = prevEntry && prevEntry.status !== 'skipped' && typeof prevEntry.takenAt === 'number'
+      ? prevEntry.takenAt
+      : prev.expectedAt;
+    if (base != null) slot.expectedAt = base + gap;
+  }
 }
 
 function spanFor(dose, med, kit) {
@@ -441,5 +479,5 @@ module.exports = {
   DEFAULT_ONSET_HOURS, DEFAULT_DURATION_HOURS, DEFAULT_GRACE_MINUTES, DEFAULT_LOW_DAYS,
   normalizeMed, activeMeds, takenDoses, doseForMedOnDay,
   startOfDay, sameLocalDay, atClock, parseISODate, tzParts,
-  expectedDosesToday, effectiveWindow, ruleMoments, dueRules, supplyStatus,
+  expectedDosesToday, effectiveWindow, doseSpacing, ruleMoments, dueRules, supplyStatus,
 };

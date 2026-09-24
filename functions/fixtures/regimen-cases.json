@@ -1974,6 +1974,608 @@
           }
         ]
       }
+    },
+    {
+      "name": "wear-off spacing: a dose taken at 8:16 puts the next at 12:16",
+      "now": 1788008400000,
+      "nowLocal": "2026-08-29, 09:00",
+      "meds": [
+        {
+          "id": "ir3",
+          "name": "IR three times",
+          "strength": "20 mg",
+          "kind": "booster",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "s1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1
+              },
+              {
+                "id": "s2",
+                "mode": "clock",
+                "time": "12:00",
+                "amount": 1
+              },
+              {
+                "id": "s3",
+                "mode": "clock",
+                "time": "16:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 3,
+          "supply": {
+            "onHand": 60,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "takenAt": 1788005760000,
+          "medId": "ir3",
+          "status": "taken",
+          "slotId": "s1"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir3",
+            "slotId": "s1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s2",
+            "amount": 1,
+            "expectedAt": 1788020160000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s3",
+            "amount": 1,
+            "expectedAt": 1788034560000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788020160000,
+          "end": 1788030960000,
+          "doseId": "d1",
+          "medId": "ir3",
+          "provisional": true,
+          "pendingMedId": "ir3",
+          "pendingExpectedAt": 1788034560000,
+          "wouldBecomeStart": 1788048960000,
+          "wouldBecomeEnd": 1788059760000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir3",
+            "tracked": true,
+            "dosesLeft": 60,
+            "daysLeft": 20,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789704000000,
+            "coverDays": 20,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "wear-off spacing: nothing taken yet keeps the set times",
+      "now": 1788001200000,
+      "nowLocal": "2026-08-29, 07:00",
+      "meds": [
+        {
+          "id": "ir3",
+          "name": "IR three times",
+          "strength": "20 mg",
+          "kind": "booster",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "s1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1
+              },
+              {
+                "id": "s2",
+                "mode": "clock",
+                "time": "12:00",
+                "amount": 1
+              },
+              {
+                "id": "s3",
+                "mode": "clock",
+                "time": "16:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 3,
+          "supply": {
+            "onHand": 60,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir3",
+            "slotId": "s1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s2",
+            "amount": 1,
+            "expectedAt": 1788019200000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s3",
+            "amount": 1,
+            "expectedAt": 1788033600000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir3",
+            "tracked": true,
+            "dosesLeft": 60,
+            "daysLeft": 20,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789704000000,
+            "coverDays": 20,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "wear-off spacing: a late second dose drags the third with it",
+      "now": 1788026400000,
+      "nowLocal": "2026-08-29, 14:00",
+      "meds": [
+        {
+          "id": "ir3",
+          "name": "IR three times",
+          "strength": "20 mg",
+          "kind": "booster",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "s1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1
+              },
+              {
+                "id": "s2",
+                "mode": "clock",
+                "time": "12:00",
+                "amount": 1
+              },
+              {
+                "id": "s3",
+                "mode": "clock",
+                "time": "16:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 3,
+          "supply": {
+            "onHand": 60,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "takenAt": 1788005760000,
+          "medId": "ir3",
+          "status": "taken",
+          "slotId": "s1"
+        },
+        {
+          "id": "d2",
+          "takenAt": 1788022800000,
+          "medId": "ir3",
+          "status": "taken",
+          "slotId": "s2"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir3",
+            "slotId": "s1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s2",
+            "amount": 1,
+            "expectedAt": 1788020160000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s3",
+            "amount": 1,
+            "expectedAt": 1788037200000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788037200000,
+          "end": 1788048000000,
+          "doseId": "d2",
+          "medId": "ir3",
+          "provisional": true,
+          "pendingMedId": "ir3",
+          "pendingExpectedAt": 1788037200000,
+          "wouldBecomeStart": 1788051600000,
+          "wouldBecomeEnd": 1788062400000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir3",
+            "tracked": true,
+            "dosesLeft": 60,
+            "daysLeft": 20,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789704000000,
+            "coverDays": 20,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "wear-off spacing: a skipped dose passes its own time along",
+      "now": 1788026400000,
+      "nowLocal": "2026-08-29, 14:00",
+      "meds": [
+        {
+          "id": "ir3",
+          "name": "IR three times",
+          "strength": "20 mg",
+          "kind": "booster",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "s1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1
+              },
+              {
+                "id": "s2",
+                "mode": "clock",
+                "time": "12:00",
+                "amount": 1
+              },
+              {
+                "id": "s3",
+                "mode": "clock",
+                "time": "16:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 3,
+          "supply": {
+            "onHand": 60,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "takenAt": 1788005760000,
+          "medId": "ir3",
+          "status": "taken",
+          "slotId": "s1"
+        },
+        {
+          "id": "d2",
+          "takenAt": 1788020400000,
+          "medId": "ir3",
+          "status": "skipped",
+          "slotId": "s2"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir3",
+            "slotId": "s1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s2",
+            "amount": 1,
+            "expectedAt": 1788020160000,
+            "state": "skipped-on-purpose"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s3",
+            "amount": 1,
+            "expectedAt": 1788034560000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788020160000,
+          "end": 1788030960000,
+          "doseId": "d1",
+          "medId": "ir3",
+          "provisional": true,
+          "pendingMedId": "ir3",
+          "pendingExpectedAt": 1788034560000,
+          "wouldBecomeStart": 1788048960000,
+          "wouldBecomeEnd": 1788059760000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir3",
+            "tracked": true,
+            "dosesLeft": 60,
+            "daysLeft": 20,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789704000000,
+            "coverDays": 20,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "wear-off spacing: chosen as clock, the set times hold",
+      "now": 1788008400000,
+      "nowLocal": "2026-08-29, 09:00",
+      "meds": [
+        {
+          "id": "ir3",
+          "name": "IR three times",
+          "strength": "20 mg",
+          "kind": "booster",
+          "form": "tablet",
+          "schedule": {
+            "times": [
+              {
+                "id": "s1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1
+              },
+              {
+                "id": "s2",
+                "mode": "clock",
+                "time": "12:00",
+                "amount": 1
+              },
+              {
+                "id": "s3",
+                "mode": "clock",
+                "time": "16:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "graceMinutes": 45,
+          "onsetHours": 4,
+          "durationHours": 3,
+          "supply": {
+            "onHand": 60,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true,
+          "spacing": "clock"
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "takenAt": 1788005760000,
+          "medId": "ir3",
+          "status": "taken",
+          "slotId": "s1"
+        }
+      ],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "ir3",
+            "slotId": "s1",
+            "amount": 1,
+            "expectedAt": 1788004800000,
+            "state": "taken"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s2",
+            "amount": 1,
+            "expectedAt": 1788019200000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "ir3",
+            "slotId": "s3",
+            "amount": 1,
+            "expectedAt": 1788033600000,
+            "state": "upcoming"
+          }
+        ],
+        "window": {
+          "start": 1788020160000,
+          "end": 1788030960000,
+          "doseId": "d1",
+          "medId": "ir3",
+          "provisional": true,
+          "pendingMedId": "ir3",
+          "pendingExpectedAt": 1788033600000,
+          "wouldBecomeStart": 1788048000000,
+          "wouldBecomeEnd": 1788058800000
+        },
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "ir3",
+            "tracked": true,
+            "dosesLeft": 60,
+            "daysLeft": 20,
+            "perDay": 3,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789704000000,
+            "coverDays": 20,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
     }
   ]
 }

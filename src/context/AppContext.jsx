@@ -66,6 +66,7 @@ export function AppProvider({ children, uid }) {
   const [rxRoutineRuns, setRoutineRuns] = useState(() => storage.getRoutineRuns());
   const [rxWater, setWater] = useState(() => storage.getWater());
   const [rxClientSent, setClientSent] = useState(() => storage.getClientSent());
+  const [rxEffects, setEffects] = useState(() => storage.getEffects());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -75,7 +76,7 @@ export function AppProvider({ children, uid }) {
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
     crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
-    rxRoutineRuns, rxWater, rxClientSent,
+    rxRoutineRuns, rxWater, rxClientSent, rxEffects,
   };
 
   const setters = useRef({
@@ -92,6 +93,7 @@ export function AppProvider({ children, uid }) {
     rxRoutineRuns: setRoutineRuns,
     rxWater: setWater,
     rxClientSent: setClientSent,
+    rxEffects: setEffects,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -156,6 +158,7 @@ export function AppProvider({ children, uid }) {
       rxRoutineRuns: st.rxRoutineRuns,
       rxWater: st.rxWater,
       rxClientSent: st.rxClientSent,
+      rxEffects: st.rxEffects,
     });
   }, [uid]);
 
@@ -462,6 +465,37 @@ export function AppProvider({ children, uid }) {
     if (uid) saveUserData(uid, { rxClientSent: next });
   }, [persist, uid]);
 
+  // ── Effect check-ins ────────────────────────────────────────────────────
+  // Kept to a year: at a few a day that's still small, and it's what the
+  // doctor report and the curve read from.
+
+  const addEffect = useCallback((effect) => {
+    const entry = { id: generateId(), at: Date.now(), ...effect };
+    const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    persist('rxEffects', [entry, ...stateRef.current.rxEffects.filter((e) => e && e.at >= cutoff)]);
+    return entry;
+  }, [persist]);
+
+  const deleteEffect = useCallback((id) => {
+    persist('rxEffects', stateRef.current.rxEffects.filter((e) => e.id !== id));
+  }, [persist]);
+
+  // ── Pill counts ─────────────────────────────────────────────────────────
+  // What was actually in the bottle against what the log says should be.
+  // `apply` makes the physical count the new truth; either way the check is
+  // recorded, so a pattern of mismatches is visible later.
+
+  const recordPillCount = useCallback((medId, counted, apply = true) => {
+    const st = stateRef.current;
+    persist('crashMeds', st.crashMeds.map((m) => {
+      if (m.id !== medId) return m;
+      const supply = normalizeMed(m).supply;
+      const expected = supply.onHand == null || supply.onHand === '' ? null : Number(supply.onHand);
+      const counts = [{ at: Date.now(), expected, counted: Number(counted) }, ...(supply.counts || [])].slice(0, 50);
+      return { ...m, supply: { ...supply, counts, ...(apply ? { onHand: Number(counted) } : {}) } };
+    }));
+  }, [persist]);
+
   // ── Warning-sign check-ins ──────────────────────────────────────────────
 
   /**
@@ -502,6 +536,7 @@ export function AppProvider({ children, uid }) {
       rxRoutineRuns, checkRoutineStep,
       rxWater, addWater, undoWater,
       rxClientSent, markClientSent,
+      rxEffects, addEffect, deleteEffect, recordPillCount,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}

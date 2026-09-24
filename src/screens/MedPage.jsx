@@ -4,13 +4,14 @@ import { Plus, X, Trash2, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { useApp } from '../context/AppContext';
 import {
   normalizeMed, supplyStatus, formatOffset, MED_KINDS, newMed, withDoseCount,
-  DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount,
+  DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount, doseSpacing,
 } from '../lib/meds.js';
 import { headingStyle, Segmented, SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
 import { formatHours } from '../lib/window.js';
 import RoutineEditor from '../components/RoutineEditor.jsx';
+import { formatClock } from '../lib/time.js';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
 
@@ -375,6 +376,25 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
         >
           <Plus size={15} /> Add another time
         </button>
+
+        {med.schedule.times.length > 1 && (
+          <div style={{ marginTop: '1rem' }}>
+            <label className="app-label">Later doses</label>
+            <Segmented
+              options={[
+                { key: 'clock', label: 'At their set times' },
+                { key: 'wearOff', label: 'When the last wears off' },
+              ]}
+              value={doseSpacing(med)}
+              onChange={(spacing) => set({ spacing })}
+            />
+            <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+              {doseSpacing(med) === 'wearOff'
+                ? `Each dose after the first is due ${med.onsetHours}h after you actually took the one before — take it at 8:16 and the next is ${formatClock(new Date(2026, 0, 5, 8, 16).getTime() + Number(med.onsetHours) * 3600000)}. The first dose keeps its set time.`
+                : 'Each dose is due at the time set above, whenever the one before was taken.'}
+            </p>
+          </div>
+        )}
 
         <label className="app-label" style={{ marginTop: '1.25rem' }}>Which days</label>
         <DayPicker

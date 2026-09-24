@@ -54,6 +54,21 @@ const TWICE = {
   rules: [], active: true,
 };
 
+const IR3 = {
+  id: 'ir3', name: 'IR three times', strength: '20 mg', kind: 'booster', form: 'tablet',
+  schedule: {
+    times: [
+      { id: 's1', mode: 'clock', time: '08:00', amount: 1 },
+      { id: 's2', mode: 'clock', time: '12:00', amount: 1 },
+      { id: 's3', mode: 'clock', time: '16:00', amount: 1 },
+    ],
+    days: [0, 1, 2, 3, 4, 5, 6],
+  },
+  graceMinutes: 45, onsetHours: 4, durationHours: 3,
+  supply: { onHand: 60, lowDays: 7, refillFrom: '' },
+  rules: [], active: true,
+};
+
 const KIT = { onsetHours: 4, durationHours: 5 };
 const MEDS = [XR, IR];
 
@@ -143,6 +158,49 @@ const cases = [
     now: at(16),
     meds: [{ ...TWICE, schedule: { ...TWICE.schedule, days: [0, 1, 2, 3, 4, 5, 6] } }],
     doses: [{ id: 'd-x', takenAt: at(14, 50), medId: 'tw', status: 'taken' }],
+    kit: KIT,
+  },
+  // "When it wears off" spacing: three IR doses set four hours apart, with a
+  // four-hour wear-off, so the schedule itself says what it is.
+  {
+    name: 'wear-off spacing: a dose taken at 8:16 puts the next at 12:16',
+    now: at(9),
+    meds: [IR3],
+    doses: [{ id: 'd1', takenAt: at(8, 16), medId: 'ir3', status: 'taken', slotId: 's1' }],
+    kit: KIT,
+  },
+  {
+    name: 'wear-off spacing: nothing taken yet keeps the set times',
+    now: at(7),
+    meds: [IR3],
+    doses: [],
+    kit: KIT,
+  },
+  {
+    name: 'wear-off spacing: a late second dose drags the third with it',
+    now: at(14),
+    meds: [IR3],
+    doses: [
+      { id: 'd1', takenAt: at(8, 16), medId: 'ir3', status: 'taken', slotId: 's1' },
+      { id: 'd2', takenAt: at(13, 0), medId: 'ir3', status: 'taken', slotId: 's2' },
+    ],
+    kit: KIT,
+  },
+  {
+    name: 'wear-off spacing: a skipped dose passes its own time along',
+    now: at(14),
+    meds: [IR3],
+    doses: [
+      { id: 'd1', takenAt: at(8, 16), medId: 'ir3', status: 'taken', slotId: 's1' },
+      { id: 'd2', takenAt: at(12, 20), medId: 'ir3', status: 'skipped', slotId: 's2' },
+    ],
+    kit: KIT,
+  },
+  {
+    name: 'wear-off spacing: chosen as clock, the set times hold',
+    now: at(9),
+    meds: [{ ...IR3, spacing: 'clock' }],
+    doses: [{ id: 'd1', takenAt: at(8, 16), medId: 'ir3', status: 'taken', slotId: 's1' }],
     kit: KIT,
   },
 ];
