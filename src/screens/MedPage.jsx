@@ -318,6 +318,16 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
             </option>
           ))}
         </select>
+
+        <label className="app-label" style={{ marginTop: '0.75rem' }}>Half-life (hours)</label>
+        <input
+          type="number" min="0.5" step="0.5" inputMode="decimal"
+          value={med.halfLifeHours ?? ''}
+          onChange={(e) => set({ halfLifeHours: e.target.value === '' ? null : Number(e.target.value) })}
+          placeholder="Optional — from the label or pharmacist"
+          className="app-input"
+          style={{ width: '100%' }}
+        />
       </div>
 
       {/* ── When ── */}

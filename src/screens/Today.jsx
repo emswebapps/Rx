@@ -13,7 +13,8 @@ import { adherenceDays, adherenceSentence } from '../lib/adherence.js';
 import { routinesForDay, formatCountdown } from '../lib/routine.js';
 import { complianceDays, complianceSummary } from '../lib/compliance.js';
 import { formatClock } from '../lib/time.js';
-import ScheduleRow, { DoseSheet, TimeEditor } from '../components/ScheduleRow.jsx';
+import ScheduleRow, { DoseSheet, TimeEditor, MedNotesSheet } from '../components/ScheduleRow.jsx';
+import { notesForMed } from '../lib/notes.js';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
@@ -48,7 +49,10 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, rxWater, addWater, undoWater,
+    rxNotes, addRxNote,
   } = useApp();
+  const [notesFor, setNotesFor] = useState(null);
+  const noteCount = (med) => notesForMed(rxNotes, med.id).length + (med.rules || []).filter((r) => String(r?.text || '').trim()).length;
   const navigate = useNavigate();
 
   // Keyed on the doses themselves so logging or editing one updates the clock
@@ -209,7 +213,13 @@ export default function RxHome() {
                           onOpenDose={() => setOpenKey(entry.key)}
                         />
                       )}
-                      <ScheduleRow entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
+                      <ScheduleRow
+                        entry={entry}
+                        now={now}
+                        onOpen={(e) => setOpenKey(e.key)}
+                        onNotes={(med) => setNotesFor(med.id)}
+                        noteCount={noteCount(entry.med)}
+                      />
                     </div>
                   );
                 })}
@@ -337,6 +347,25 @@ export default function RxHome() {
           onOpenMed={(medId) => navigate(`/meds/${medId}`)}
         />
       )}
+
+      {notesFor && (() => {
+        const med = schedule.find((e) => e.medId === notesFor)?.med;
+        if (!med) return null;
+        return (
+          <MedNotesSheet
+            med={med}
+            notes={notesForMed(rxNotes, med.id)}
+            onClose={() => setNotesFor(null)}
+            onAdd={() => {
+              const note = addRxNote({ text: '', kind: 'timing', medId: med.id });
+              setNotesFor(null);
+              navigate(`/notes?open=${note.id}`);
+            }}
+            onOpenNote={(n) => { setNotesFor(null); navigate(`/notes?open=${n.id}`); }}
+            onEditRules={() => { setNotesFor(null); navigate(`/meds/${med.id}`); }}
+          />
+        );
+      })()}
 
       {editable && (
         <TimeEditor

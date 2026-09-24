@@ -75,6 +75,9 @@ export const DEFAULT_MED = {
     days: EVERY_DAY,
   },
   graceMinutes: DEFAULT_GRACE_MINUTES,
+  // Typed in from the label or the pharmacist, never filled in by the app.
+  // Shown on the dose card; nothing is calculated from it.
+  halfLifeHours: null,
   onsetHours: DEFAULT_ONSET_HOURS,
   durationHours: DEFAULT_DURATION_HOURS,
   supply: { onHand: null, lowDays: DEFAULT_LOW_DAYS, refillFrom: '', lastFilledAt: null },
@@ -229,6 +232,7 @@ export function normalizeMed(med = {}) {
     graceMinutes: nonNegative(med.graceMinutes, DEFAULT_GRACE_MINUTES),
     onsetHours: positive(med.onsetHours, DEFAULT_ONSET_HOURS),
     durationHours: positive(med.durationHours, DEFAULT_DURATION_HOURS),
+    halfLifeHours: positive(med.halfLifeHours, null),
     rules: Array.isArray(med.rules) ? med.rules : [],
   };
 }
@@ -538,6 +542,30 @@ export function effectiveWindow(meds, doses, kit = {}, now = Date.now()) {
     pendingSlotId: pending ? pending.slotId : null,
     pendingExpectedAt: pending ? pending.expectedAt : null,
   };
+}
+
+/**
+ * When this dose wears off: the time it was taken plus the medication's own
+ * "hours until it wears off" — the same number the evening window starts
+ * from. For a dose not taken yet it's where it would land if taken on time,
+ * marked `projected`, so the card can say "if taken on time" rather than
+ * implying it already happened. Null for a skip, or with no time to go on.
+ */
+export function wearOffFor(entry) {
+  if (!entry || entry.state === 'skipped-on-purpose') return null;
+  const onset = positive(entry.med?.onsetHours, DEFAULT_ONSET_HOURS) * HOUR_MS;
+  if (entry.dose && typeof entry.dose.takenAt === 'number') {
+    return { at: entry.dose.takenAt + onset, projected: false };
+  }
+  if (entry.state === 'skipped' || entry.expectedAt == null) return null;
+  return { at: entry.expectedAt + onset, projected: true };
+}
+
+/** "10h" / "4.5h" — a half-life, as typed. */
+export function formatHalfLife(hours) {
+  const n = Number(hours);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${Math.round(n * 10) / 10}h`;
 }
 
 // ── Rules ───────────────────────────────────────────────────────────────────
