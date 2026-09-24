@@ -113,6 +113,38 @@ export function suggestedOnset(sessions, doses, minSamples = MIN_ONSET_SAMPLES) 
   return { hours: Math.round((ms / HOUR_MS) * 100) / 100, samples: gaps.length };
 }
 
+/**
+ * `suggestedOnset`, for one medication.
+ *
+ * A session is attributed to the dose that governed it — the most recent one
+ * taken before it, of anything — and counts here only when that dose was this
+ * medication. So an IR booster's onset is learned from the evenings the IR
+ * was the last thing taken, and isn't dragged by the evenings it wasn't.
+ */
+export function suggestedOnsetForMed(sessions, doses, medId, minSamples = MIN_ONSET_SAMPLES) {
+  if (!medId || !Array.isArray(sessions) || !Array.isArray(doses)) return null;
+  const taken = doses
+    .filter((d) => d && typeof d.takenAt === 'number' && d.status !== 'skipped')
+    .sort((a, b) => a.takenAt - b.takenAt);
+
+  const gaps = [];
+  for (const s of sessions) {
+    if (!s || typeof s.startedAt !== 'number') continue;
+    let best = null;
+    for (const d of taken) {
+      if (d.takenAt > s.startedAt) break;
+      best = d;
+    }
+    if (!best || best.medId !== medId) continue;
+    const gap = s.startedAt - best.takenAt;
+    if (gap > PAIR_MAX_MS) continue;
+    gaps.push(gap);
+  }
+
+  if (gaps.length < minSamples) return null;
+  return { hours: Math.round((median(gaps) / HOUR_MS) * 100) / 100, samples: gaps.length };
+}
+
 /** "4h 20m" — for showing an inferred onset back in words. */
 export function formatHours(hours) {
   const total = Math.max(0, Math.round(hours * 60));

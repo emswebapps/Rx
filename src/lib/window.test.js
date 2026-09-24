@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  latestDose, predictWindow, windowState, windowProgress, suggestedOnset, formatHours,
+  latestDose, predictWindow, windowState, windowProgress, suggestedOnset, suggestedOnsetForMed, formatHours,
   HOUR_MS, SOON_MS, MIN_ONSET_SAMPLES,
 } from './window.js';
 
@@ -144,4 +144,28 @@ test('formatHours reads the way a person would say it', () => {
   assert.equal(formatHours(4), '4h');
   assert.equal(formatHours(4.333), '4h 20m');
   assert.equal(formatHours(0.5), '30m');
+});
+
+// ── learned onset, per medication ───────────────────────────────────────────
+
+test('a medication’s onset is learned only from the evenings it governed', () => {
+  const HR = 60 * 60 * 1000;
+  const base = new Date(2026, 8, 1, 8, 0, 0, 0).getTime();
+  const doses = [];
+  const sessions = [];
+  for (let i = 0; i < 6; i += 1) {
+    const day = base + i * 24 * HR;
+    // IR at 2 PM, crash three hours later.
+    doses.push({ id: `ir${i}`, medId: 'ir', takenAt: day + 6 * HR, status: 'taken' });
+    sessions.push({ id: `s${i}`, startedAt: day + 9 * HR });
+  }
+  // One evening where the XR was the last thing taken: not the IR's to learn from.
+  doses.push({ id: 'xr', medId: 'xr', takenAt: base + 7 * 24 * HR });
+  sessions.push({ id: 'sx', startedAt: base + 7 * 24 * HR + 10 * HR });
+
+  assert.deepStrictEqual(suggestedOnsetForMed(sessions, doses, 'ir'), { hours: 3, samples: 6 });
+  assert.strictEqual(suggestedOnsetForMed(sessions, doses, 'xr'), null);
+  // A skipped dose governs nothing.
+  const skipped = doses.map((d) => (d.medId === 'ir' ? { ...d, status: 'skipped' } : d));
+  assert.strictEqual(suggestedOnsetForMed(sessions, skipped, 'ir'), null);
 });

@@ -23,6 +23,9 @@ const KEYS = {
   // prefix the others are stuck with. Nothing is written under it yet, so there
   // is no live data to strand.
   NOTES: 'rx_notes',
+  ROUTINE_RUNS: 'rx_routine_runs',
+  WATER: 'rx_water',
+  CLIENT_SENT: 'rx_client_sent',
 };
 
 function get(key) {
@@ -63,6 +66,7 @@ export const storage = {
       crash: {
         timerEnd: true, windowHeadsUp: true, escrowOpened: true, crashNote: true,
         doseDue: true, ruleReminders: true, refillLow: true,
+        routineWait: true, water: true,
         // Off until asked for: a second buzz about a dose whose moment has
         // already passed is mostly guilt.
         doseLate: false,
@@ -88,6 +92,12 @@ export const storage = {
   setBehaviors: (v) => set(KEYS.BEHAVIORS, v),
   getNotes: () => get(KEYS.NOTES) || [],
   setNotes: (v) => set(KEYS.NOTES, v),
+  getRoutineRuns: () => get(KEYS.ROUTINE_RUNS) || [],
+  setRoutineRuns: (v) => set(KEYS.ROUTINE_RUNS, v),
+  getWater: () => get(KEYS.WATER) || [],
+  setWater: (v) => set(KEYS.WATER, v),
+  getClientSent: () => get(KEYS.CLIENT_SENT) || {},
+  setClientSent: (v) => set(KEYS.CLIENT_SENT, v),
 };
 
 // The Firestore field names, which are also the localStorage slices. One list,
@@ -103,4 +113,12 @@ export const CLOUD_FIELDS = {
   crashMeds: [storage.getMeds, storage.setMeds],
   crashBehaviors: [storage.getBehaviors, storage.setBehaviors],
   rxNotes: [storage.getNotes, storage.setNotes],
+  // Check-offs for the routine steps around a dose — see lib/routine.js.
+  rxRoutineRuns: [storage.getRoutineRuns, storage.setRoutineRuns],
+  // One timestamp per glass — see lib/water.js.
+  rxWater: [storage.getWater, storage.setWater],
+  // Reminders this device has already shown while open, by tag. The scheduler
+  // reads it as "already sent", so a buzz the app fired on the second isn't
+  // repeated by the next server tick.
+  rxClientSent: [storage.getClientSent, storage.setClientSent],
 };

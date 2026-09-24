@@ -9,6 +9,8 @@ import {
 import { headingStyle, Segmented, SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
+import { formatHours } from '../lib/window.js';
+import RoutineEditor from '../components/RoutineEditor.jsx';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
 
@@ -562,6 +564,22 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
               <strong style={{ color: 'var(--text)' }}> History </strong>
               will tell you what they actually are.
             </p>
+            <Segmented
+              options={[
+                { key: 'manual', label: 'My number' },
+                { key: 'learned', label: 'Learn it from my crashes' },
+              ]}
+              value={med.onsetSource === 'learned' ? 'learned' : 'manual'}
+              onChange={(onsetSource) => set({ onsetSource })}
+              style={{ marginBottom: '0.75rem' }}
+            />
+            {med.onsetSource === 'learned' && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+                {med.learnedSamples
+                  ? `Set from ${med.learnedSamples} crashes that followed this one: about ${formatHours(med.onsetHours)} after you take it. It keeps updating as you log more.`
+                  : 'Uses your number below until five crash sessions have followed this medication, then sets it from when they actually started.'}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <div style={{ flex: 1 }}>
                 <label className="app-label">Hours until it wears off</label>
@@ -569,6 +587,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
                   type="number" min="0.5" step="0.5"
                   value={med.onsetHours}
                   onChange={(e) => set({ onsetHours: Number(e.target.value) })}
+                  disabled={med.onsetSource === 'learned' && Boolean(med.learnedSamples)}
                   className="app-input" style={{ width: '100%' }}
                 />
               </div>
@@ -694,6 +713,16 @@ function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) 
           {formatAmount(time.amount, form).replace(/^[\d.]+\s/, '')}
         </span>
       </div>
+
+      <RoutineEditor
+        routine={time.routine}
+        // Stamped when first set up, so the days before don't count as a
+        // routine not followed.
+        onChange={(routine) => onChange({
+          routine,
+          routineSince: routine.length ? (time.routineSince || Date.now()) : null,
+        })}
+      />
     </div>
   );
 }

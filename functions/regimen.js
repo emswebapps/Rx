@@ -400,6 +400,6 @@ module.exports = {
   HOUR_MS, MINUTE_MS, LOOKBACK_MS, RULE_GRACE_MS,
   DEFAULT_ONSET_HOURS, DEFAULT_DURATION_HOURS, DEFAULT_GRACE_MINUTES, DEFAULT_LOW_DAYS,
   normalizeMed, activeMeds, takenDoses, doseForMedOnDay,
-  startOfDay, sameLocalDay, atClock, parseISODate,
+  startOfDay, sameLocalDay, atClock, parseISODate, tzParts,
   expectedDosesToday, effectiveWindow, ruleMoments, dueRules, supplyStatus,
 };

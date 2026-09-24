@@ -68,6 +68,70 @@ says so plainly rather than implying more precision than exists. A medication
 carries `createdAt` and `archivedAt` so the weeks before it existed, or after it
 stopped, are excluded rather than counted as clean.
 
+### The routine around a dose
+
+Some medication only works when it's taken the same way every time: *eat three
+eggs, wait thirty minutes, take it.* Each dose time can carry a **routine**, an
+ordered list of steps that shows on Today right above the dose card. A step
+can be a task, a wait, or the dose itself. The editor has a one-tap
+"Eat → wait 30 min → take" preset.
+
+**A wait starts the moment the step before it is checked off**, not at a clock
+time, so eating twenty minutes late moves the whole routine with you. While a
+wait runs, the countdown is the biggest thing on the card and the dose shows
+*Not yet*. When it ends the phone buzzes: to the second from the open app,
+and within five minutes from the scheduler when the app is closed. Both use
+the same tag, and the app records what it already sent (`rxClientSent`), so
+the same buzz never arrives twice. Taking the dose early is allowed. It's your
+medication. But the step is marked *before the wait was up* and the routine
+doesn't count as followed. The check-offs live in `rxRoutineRuns`.
+`src/lib/routine.js` has the logic.
+
+### Water
+
+Switched on in Settings: a glass counter on Today, one tap per glass (hold to
+undo). The goal, the interval and the cutoff time are all the user's numbers.
+Reminders start **one interval after the first dose of the day**. Each glass
+resets the clock, and they stop at the goal or the cutoff. A reminder carries
+a *Drank one* button that logs the glass from the lock screen. The log is
+`rxWater`. The logic is `src/lib/water.js`.
+
+### Crash timing that sets itself
+
+Logging the dose is all it takes. Today then reads *"Crash expected ~3:40 PM ·
+in 3h 12m"*. A medication can be set to **learn its timing from my crashes**.
+Once five crash sessions have followed it, its onset is replaced with the
+median of when they actually started, and it keeps updating from there
+(`suggestedOnsetForMed` in `window.js`). The number is written onto the
+medication, so the scheduler's heads-up uses it without knowing anything about
+sessions. Around the window, one tap records *"I'm noticing it and I'm OK"* as
+a check-in.
+
+### Compliance score
+
+One 0–100 number per day (`src/lib/compliance.js`). It shows on Today and, for
+thirty days with a per-day breakdown, on History → Score.
+
+| Part | Weight | Counts |
+|---|---|---|
+| Doses on time | 40 | on time = 1, late = ½, a deliberate skip isn't counted |
+| Routine followed | 25 | every step done, in order, no wait cut short |
+| Water goal | 20 | glasses ÷ goal, capped at 1 |
+| Crash checked in | 15 | a session or check-in within an hour of the predicted window |
+
+A part that doesn't apply is left out and the rest are re-weighted. That covers
+no routine set up, water off, and days before either was switched on (both are
+stamped with a `since`). It also covers anything still ahead today, like a dose
+not yet due or a window that hasn't passed. A score shouldn't punish you for a
+feature you don't use, and it shouldn't start every morning at zero.
+
+The scheduler's copies of the wait and water timing are in `functions/daily.js`,
+held to `functions/fixtures/daily-cases.json` the same way the regimen is:
+
+```bash
+TZ=America/New_York node scripts/make-daily-fixtures.mjs
+```
+
 ### What I've noticed
 
 The dose log records what happened. It had nowhere to keep the other half — how
@@ -127,11 +191,14 @@ src/
                 protocol.js   the crash session state machine
                 stats.js      crash session history
                 notes.js      free-text observations, pinning, filtering
+                routine.js    the steps around a dose, and their waits
+                water.js      glasses, goal, when the next is due
+                compliance.js the daily 0–100 score
   screens/      one file per page, plus screens/crash/ for the protocol
   components/   shared UI
   context/      auth, and the single app-state provider
   utils/        storage cache, Firestore sync, notifications
-functions/      the scheduled reminder Cloud Function
+functions/      the scheduled reminder Cloud Function (every 5 minutes)
   regimen.js    a CommonJS port of lib/meds.js, held to the same fixture
 ```
 

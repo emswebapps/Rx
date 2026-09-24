@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, Share2, Copy, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { mergeWater } from '../lib/water.js';
 import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
 import { suggestedOnset, formatHours } from '../lib/window.js';
@@ -222,6 +223,19 @@ export default function SettingsView() {
         )}
       </div>
 
+      <WaterSettings
+        water={mergeWater(kit.water)}
+        onChange={(patch) => {
+          const next = { ...mergeWater(kit.water), ...patch };
+          // Stamped the first time it's switched on, so the days before it
+          // don't count against the compliance score.
+          if (patch.enabled && !next.since) next.since = Date.now();
+          updateCrashKit({ water: next });
+        }}
+        h2={h2}
+        section={section}
+      />
+
       <div style={section}>
         <h2 style={h2}>MY YELLOW LIGHTS</h2>
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -307,6 +321,18 @@ export default function SettingsView() {
             hint="Your own words, buzzed back at you. A before-the-dose rule stops once you've logged it."
           />
           <Toggle
+            checked={notifPrefs.crash?.routineWait ?? true}
+            onChange={(v) => setCrashPref('routineWait', v)}
+            label="When a routine wait is up"
+            hint="The moment the wait you started ends — to the second while the app is open, within a few minutes when it isn't."
+          />
+          <Toggle
+            checked={notifPrefs.crash?.water ?? true}
+            onChange={(v) => setCrashPref('water', v)}
+            label="Water reminders"
+            hint="Every interval after your first dose, until the goal or the cutoff. Tap “Drank one” to log it from the lock screen."
+          />
+          <Toggle
             checked={notifPrefs.crash?.refillLow ?? true}
             onChange={(v) => setCrashPref('refillLow', v)}
             label="When a supply is running low"
@@ -327,6 +353,55 @@ export default function SettingsView() {
         This is a tool you built for yourself, not treatment. If a night ever goes
         somewhere darker than a crash, that’s a person to call, not an app.
       </p>
+    </div>
+  );
+}
+
+/** How much, how often, and until when — all the user's own numbers. */
+function WaterSettings({ water, onChange, h2, section }) {
+  return (
+    <div style={section}>
+      <h2 style={h2}>WATER</h2>
+      <Toggle
+        checked={water.enabled}
+        onChange={(enabled) => onChange({ enabled })}
+        label="Track water"
+        hint="A glass counter on Today, and a nudge every so often once you’ve taken your first dose."
+      />
+      {water.enabled && (
+        <div style={{ display: 'grid', gap: '0.75rem', marginTop: '0.875rem' }}>
+          <div>
+            <label className="app-label">Remind me every</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {[45, 60, 90, 120].map((m) => (
+                <button key={m} onClick={() => onChange({ everyMinutes: m })} style={pickStyle(water.everyMinutes === m)}>
+                  {m < 60 ? `${m}m` : `${m / 60}h`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ flex: 1 }}>
+              <label className="app-label">Glasses a day</label>
+              <input
+                type="number" min="1" max="20" step="1" inputMode="numeric"
+                value={water.goal}
+                onChange={(e) => onChange({ goal: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })}
+                className="app-input" style={{ width: '100%' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="app-label">Stop reminding at</label>
+              <input
+                type="time"
+                value={water.until}
+                onChange={(e) => onChange({ until: e.target.value })}
+                className="app-input" style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -466,7 +466,7 @@ export function nextScheduledDay(med, dayTs) {
 // ── The window ──────────────────────────────────────────────────────────────
 
 /** The span a single logged dose is responsible for. */
-function spanFor(dose, med, kit) {
+export function spanFor(dose, med, kit) {
   const onset = positive(med?.onsetHours, positive(kit.onsetHours, DEFAULT_ONSET_HOURS));
   const duration = positive(med?.durationHours, positive(kit.durationHours, DEFAULT_DURATION_HOURS));
   const start = dose.takenAt + onset * HOUR_MS;

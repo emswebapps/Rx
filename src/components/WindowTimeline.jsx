@@ -1,6 +1,7 @@
-import { Pill } from 'lucide-react';
+import { Pill, Check } from 'lucide-react';
 import { formatClock } from '../lib/time.js';
-import { windowState } from '../lib/window.js';
+import { windowState, formatHours, HOUR_MS } from '../lib/window.js';
+import { CRASH_SLACK_MS } from '../lib/compliance.js';
 import { effectiveWindow, normalizeMed } from '../lib/meds.js';
 
 /**
@@ -71,7 +72,7 @@ function Bar({ w, now }) {
  * Renders nothing at all when there's no dose to compute from, so an empty
  * install isn't given a card explaining a concept it can't demonstrate.
  */
-export default function WindowTimeline({ meds, doses, kit, now }) {
+export default function WindowTimeline({ meds, doses, kit, now, behaviors = [], sessions = [], onCheckIn }) {
   const w = effectiveWindow(meds, doses, kit, now);
   if (!w) return null;
 
@@ -96,6 +97,22 @@ export default function WindowTimeline({ meds, doses, kit, now }) {
 
   const urgent = state === 'soon' && !w.provisional;
 
+  // The countdown to the crash, worked out from the dose that governs it — so
+  // logging the IR is all it takes to set it.
+  const governing = normalizeMed(meds.find((m) => m.id === w.medId));
+  const countdown = state === 'before' || state === 'soon'
+    ? `Crash expected ~${formatClock(w.start)} · in ${formatHours((w.start - now) / HOUR_MS)}`
+    : null;
+  const learned = governing && governing.onsetSource === 'learned' && governing.learnedSamples
+    ? `Timing learned from ${governing.learnedSamples} crashes` : null;
+
+  // Meeting it on purpose: once it's close, one tap says "I'm here and I'm OK".
+  const lo = w.start - CRASH_SLACK_MS;
+  const hi = w.end + CRASH_SLACK_MS;
+  const near = (t) => typeof t === 'number' && t >= lo && t <= hi;
+  const checkedIn = behaviors.some((b) => b && near(b.at)) || sessions.some((x) => x && near(x.startedAt));
+  const canCheckIn = onCheckIn && now >= lo && now <= hi;
+
   return (
     <div className="app-card" style={{ padding: '1rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -104,6 +121,18 @@ export default function WindowTimeline({ meds, doses, kit, now }) {
           TONIGHT
         </p>
       </div>
+
+      {countdown && (
+        <p style={{
+          fontSize: '1.0625rem', fontWeight: 800, marginTop: '0.625rem',
+          color: urgent ? 'var(--accent-text)' : 'var(--text)', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {countdown}
+        </p>
+      )}
+      {learned && (
+        <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>{learned}</p>
+      )}
 
       <Bar w={w} now={now} />
 
@@ -115,6 +144,28 @@ export default function WindowTimeline({ meds, doses, kit, now }) {
         }}>
           {line}
         </p>
+      )}
+
+      {canCheckIn && (
+        checkedIn ? (
+          <p style={{
+            display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.75rem',
+            fontSize: '0.875rem', fontWeight: 700, color: 'var(--positive-text)',
+          }}>
+            <Check size={15} /> Checked in for this one
+          </p>
+        ) : (
+          <button
+            onClick={onCheckIn}
+            style={{
+              width: '100%', marginTop: '0.75rem', padding: '0.625rem', borderRadius: '0.75rem',
+              cursor: 'pointer', backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+              fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)',
+            }}
+          >
+            Check in — I’m noticing it and I’m OK
+          </button>
+        )
       )}
     </div>
   );

@@ -5,6 +5,11 @@ import { activeSession, staleSessions, isTimerDone } from '../lib/protocol.js';
 import { mergeKit } from '../lib/kit.js';
 import { sendNotification } from '../utils/notifications';
 import { useBack } from '../lib/useBack.js';
+import { useNow } from '../lib/useCountdown.js';
+import { expectedDosesToday, normalizeMed } from '../lib/meds.js';
+import { nextWaitEnd, waitTag, dayKey } from '../lib/routine.js';
+import { nextWaterDue, waterReminderTag } from '../lib/water.js';
+import { suggestedOnsetForMed } from '../lib/window.js';
 
 import RxHome from './Today.jsx';
 import RxNav from './Nav.jsx';
@@ -68,6 +73,8 @@ export default function RxApp() {
   return (
     <>
       <LegacyLinks />
+      <DailyReminders />
+      <LearnedOnset />
       <Routes>
         <Route path="/" element={<RxHome />} />
         <Route path="/meds" element={<MedsView />} />
@@ -126,6 +133,85 @@ function RunnerRoute({ active }) {
       onOpenAnchors={() => navigate('/anchors')}
     />
   );
+}
+
+/**
+ * The routine's waits and the water reminders, to the second while the app is
+ * open.
+ *
+ * The scheduler covers the app being closed, but it only looks every few
+ * minutes; a thirty-minute wait that buzzes at thirty-four is the kind of
+ * drift that makes a routine stop feeling exact. Each timer here is armed for
+ * the exact moment and, when it fires, records its tag so the scheduler
+ * doesn't send the same thing again.
+ *
+ * Same privacy rule as the pushed ones: fixed words, never a step or a name.
+ */
+function DailyReminders() {
+  const {
+    crashMeds, crashDoses, crashKit, notifPrefs, rxRoutineRuns, rxWater, rxClientSent, markClientSent,
+  } = useApp();
+  const now = useNow({ tick: 60_000, syncKey: `${rxRoutineRuns.length}:${rxWater.length}:${crashDoses.length}` });
+  const kit = mergeKit(crashKit);
+  const prefs = notifPrefs.crash || {};
+  const tracking = kit.doseTracking !== false;
+
+  const wait = tracking && prefs.routineWait !== false
+    ? nextWaitEnd(expectedDosesToday(crashMeds, crashDoses, now), rxRoutineRuns, now, now)
+    : null;
+  const waitKey = wait ? waitTag(wait.runId, wait.stepId) : null;
+
+  useEffect(() => {
+    if (!wait || rxClientSent[waitKey]) return undefined;
+    const id = setTimeout(() => {
+      sendNotification('Your wait is up', { body: 'Tap to see what’s next.', tag: waitKey, data: { url: '/Rx/' } });
+      markClientSent(waitKey);
+    }, Math.max(0, wait.endsAt - Date.now()));
+    return () => clearTimeout(id);
+  }, [waitKey, wait?.endsAt, rxClientSent[waitKey]]);
+
+  const waterOn = tracking && prefs.water !== false;
+  const waterDue = waterOn ? nextWaterDue(rxWater, crashDoses, kit.water, now) : null;
+
+  useEffect(() => {
+    if (waterDue == null) return undefined;
+    const id = setTimeout(() => {
+      const at = Date.now();
+      const tag = waterReminderTag(rxWater, crashDoses, kit.water, at, dayKey(at));
+      if (!tag || rxClientSent[tag]) return;
+      sendNotification('Water', { body: 'Time for a glass.', tag, data: { url: '/Rx/' } });
+      markClientSent(tag, at);
+    }, Math.max(0, waterDue - Date.now()));
+    return () => clearTimeout(id);
+  }, [waterDue, rxWater.length]);
+
+  return null;
+}
+
+/**
+ * Crash timing that sets itself.
+ *
+ * A medication set to learn its timing has its onset replaced with the median
+ * of what actually happened, once there are enough crashes to mean anything.
+ * Writing it onto the medication — rather than computing it at read time —
+ * is what lets the scheduler's heads-up use the same number without knowing
+ * anything about sessions.
+ */
+function LearnedOnset() {
+  const { crashMeds, crashDoses, crashSessions, updateCrashMed } = useApp();
+
+  useEffect(() => {
+    for (const raw of crashMeds) {
+      const med = normalizeMed(raw);
+      if (med.onsetSource !== 'learned' || med.active === false) continue;
+      const learned = suggestedOnsetForMed(crashSessions, crashDoses, med.id);
+      if (!learned) continue;
+      if (Math.abs(learned.hours - med.onsetHours) < 0.05 && med.learnedSamples === learned.samples) continue;
+      updateCrashMed(med.id, { onsetHours: learned.hours, learnedSamples: learned.samples });
+    }
+  }, [crashMeds, crashDoses, crashSessions, updateCrashMed]);
+
+  return null;
 }
 
 /**

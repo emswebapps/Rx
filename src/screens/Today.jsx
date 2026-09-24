@@ -10,11 +10,16 @@ import {
   expectedDosesOnDay, supplyStatus, activeMeds, startOfDay, sameLocalDay as sameDay,
 } from '../lib/meds.js';
 import { adherenceDays, adherenceSentence } from '../lib/adherence.js';
+import { routinesForDay, formatCountdown } from '../lib/routine.js';
+import { complianceDays, complianceSummary } from '../lib/compliance.js';
 import { formatClock } from '../lib/time.js';
 import ScheduleRow, { DoseSheet, TimeEditor } from '../components/ScheduleRow.jsx';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
+import RoutineCard from '../components/RoutineCard.jsx';
+import WaterRow from '../components/WaterRow.jsx';
+import ComplianceCard from '../components/ComplianceRing.jsx';
 
 const DAY_LETTERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -40,12 +45,14 @@ export default function RxHome() {
   const {
     crashMeds, crashDoses, crashKit, crashSessions,
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
+    crashBehaviors, checkInCrash,
+    rxRoutineRuns, checkRoutineStep, rxWater, addWater, undoWater,
   } = useApp();
   const navigate = useNavigate();
 
   // Keyed on the doses themselves so logging or editing one updates the clock
   // straight away rather than at the next minute boundary.
-  const syncKey = `${crashMeds.length}:${crashDoses.length}:${
+  const syncKey = `${crashMeds.length}:${rxRoutineRuns.length}:${JSON.stringify(rxRoutineRuns[0]?.done || {})}:${crashDoses.length}:${
     crashDoses.length ? Math.max(...crashDoses.map((d) => d.takenAt)) : 0}`;
   const now = useNow({ tick: 60_000, syncKey });
 
@@ -64,6 +71,7 @@ export default function RxHome() {
 
   const schedule = expectedDosesOnDay(crashMeds, crashDoses, day, now);
   const groups = groupByTime(schedule);
+  const routines = new Map(routinesForDay(schedule, rxRoutineRuns, day, now).map((r) => [r.key, r]));
   const tracking = kit.doseTracking !== false;
 
   // The heading picked out in the accent: the first time still waiting on
@@ -78,6 +86,16 @@ export default function RxHome() {
     .filter(({ supply }) => supply.low || supply.refillOpen);
 
   const adherence = adherenceSentence(adherenceDays(crashMeds, crashDoses, { now }));
+
+  // Seven days is enough for today's number and the week beside it; History
+  // computes the full thirty.
+  const complianceData = {
+    meds: crashMeds, doses: crashDoses, kit, sessions: crashSessions,
+    behaviors: crashBehaviors, runs: rxRoutineRuns, water: rxWater,
+  };
+  const recentCompliance = isToday ? complianceDays(complianceData, { days: 7, now }) : [];
+  const todayCompliance = recentCompliance[recentCompliance.length - 1] || null;
+  const complianceWeek = complianceSummary(recentCompliance);
 
   // A dose logged on a past day is recorded at the time it was due, so it lands
   // on that day and in that slot. Today's is recorded as now, as it always was.
@@ -148,9 +166,23 @@ export default function RxHome() {
                 {g.label}
               </h2>
               <div style={{ display: 'grid', gap: '0.75rem' }}>
-                {g.entries.map((entry) => (
-                  <ScheduleRow key={entry.key} entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
-                ))}
+                {g.entries.map((entry) => {
+                  const routine = routines.get(entry.key);
+                  return (
+                    <div key={entry.key} style={{ display: 'grid', gap: '0.5rem' }}>
+                      {routine && (
+                        <RoutineCard
+                          routine={routine}
+                          when={when}
+                          onToggleStep={(stepId, at) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, at)}
+                          onTake={() => take(entry)}
+                          onOpenDose={() => setOpenKey(entry.key)}
+                        />
+                      )}
+                      <ScheduleRow entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
+                    </div>
+                  );
+                })}
               </div>
             </section>
           ))
@@ -176,6 +208,19 @@ export default function RxHome() {
                 morning — but above everything else, because until Rx is
                 installed its dose reminders cannot reach a lock screen at all
                 on iOS. */}
+            {tracking && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <WaterRow
+                  log={rxWater}
+                  doses={crashDoses}
+                  config={kit.water}
+                  now={now}
+                  onAdd={() => addWater()}
+                  onUndo={() => undoWater()}
+                />
+              </div>
+            )}
+
             <div style={{ marginTop: '1.5rem' }}>
               <InstallCard />
             </div>
@@ -205,11 +250,24 @@ export default function RxHome() {
             {/* ── Tonight ── */}
             {tracking && (
               <div style={{ marginTop: '1.25rem' }}>
-                <WindowTimeline meds={crashMeds} doses={crashDoses} kit={kit} now={now} />
+                <WindowTimeline
+                  meds={crashMeds}
+                  doses={crashDoses}
+                  kit={kit}
+                  now={now}
+                  behaviors={crashBehaviors}
+                  sessions={crashSessions}
+                  onCheckIn={() => checkInCrash()}
+                />
               </div>
             )}
 
             {/* ── How it's been going ── */}
+            {tracking && todayCompliance && todayCompliance.score != null && (
+              <div style={{ marginTop: '1rem' }}>
+                <ComplianceCard day={todayCompliance} summary={complianceWeek} onOpen={() => navigate('/history?tab=score')} />
+              </div>
+            )}
             {adherence && (
               <button
                 onClick={() => navigate('/history')}
@@ -240,6 +298,7 @@ export default function RxHome() {
         <DoseSheet
           entry={openEntry}
           when={when}
+          routineNote={routineNote(routines.get(openEntry.key), Date.now())}
           onClose={() => setOpenKey(null)}
           onTake={take}
           onSkip={skip}
@@ -258,6 +317,24 @@ export default function RxHome() {
       )}
     </div>
   );
+}
+
+/**
+ * What the dose sheet should say about the routine in front of it, if taking
+ * the dose now would jump it. Said once, plainly, and then it gets out of the
+ * way — it's your medication.
+ */
+function routineNote(routine, now) {
+  if (!routine) return null;
+  const dose = routine.steps.find((s) => s.kind === 'dose');
+  if (!dose || dose.state === 'done' || dose.state === 'skipped' || dose.state === 'active') return null;
+  if (routine.waitingUntil) {
+    return `Your wait has ${formatCountdown(routine.waitingUntil - now)} left. Taking it now counts the routine as not followed.`;
+  }
+  const next = routine.steps.find((s) => s.state === 'active');
+  return next && next.kind === 'task'
+    ? `“${next.text}” isn’t checked off yet.`
+    : null;
 }
 
 function daysBetween(fromDay, toDay) {

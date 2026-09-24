@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import DoseHistory from './DoseHistory.jsx';
+import ComplianceHistory from './ComplianceHistory.jsx';
 import { Segmented, pageStyle } from '../components/medsUi.jsx';
 import { summarize, historySentence, rankMoves } from '../lib/stats.js';
 import { formatClock } from '../lib/time.js';
@@ -246,7 +247,7 @@ function SessionsHistory() {
  */
 export default function HistoryView() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'sessions' ? 'sessions' : 'doses';
+  const tab = ['sessions', 'score'].includes(params.get('tab')) ? params.get('tab') : 'doses';
 
   return (
     <div className="app-page" style={pageStyle}>
@@ -260,14 +261,15 @@ export default function HistoryView() {
       <Segmented
         options={[
           { key: 'doses', label: 'Doses' },
+          { key: 'score', label: 'Score' },
           { key: 'sessions', label: 'Crashes' },
         ]}
         value={tab}
-        onChange={(next) => setParams(next === 'sessions' ? { tab: 'sessions' } : {}, { replace: true })}
+        onChange={(next) => setParams(next === 'doses' ? {} : { tab: next }, { replace: true })}
         style={{ marginBottom: '1.5rem' }}
       />
 
-      {tab === 'doses' ? <DoseHistory /> : <SessionsHistory />}
+      {tab === 'doses' ? <DoseHistory /> : tab === 'score' ? <ComplianceHistory /> : <SessionsHistory />}
     </div>
   );
 }

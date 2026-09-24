@@ -1,6 +1,7 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
 const regimen = require('./regimen');
+const daily = require('./daily');
 
 admin.initializeApp();
 
@@ -110,6 +111,9 @@ const DOSE_ACTIONS = [
   { action: 'skip', title: 'Skip' },
 ];
 
+// One button on a water reminder: log the glass from the lock screen.
+const WATER_ACTIONS = [{ action: 'drank', title: 'Drank one' }];
+
 function crashPositive(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -163,8 +167,11 @@ function collectCrashMessages(data, sent, now, tz) {
   const tracking = kit.doseTracking !== false;
   const out = [];
 
+  // The app fires the routine and water reminders itself, to the second, while
+  // it's open, and records the tags it used here. Those count as sent.
+  const clientSent = data.rxClientSent || {};
   const push = (tag, title, body, url, extra) => {
-    if (!sent[tag]) out.push({ tag, title, body, url: url || RX_APP_URL, ...extra });
+    if (!sent[tag] && !clientSent[tag]) out.push({ tag, title, body, url: url || RX_APP_URL, ...extra });
   };
 
   // ── The window ──
@@ -253,6 +260,29 @@ function collectCrashMessages(data, sent, now, tz) {
     }
   }
 
+  // ── A routine wait has run out ──
+  // "Eat, wait 30, take it": the wait started when the step before it was
+  // checked off, so this fires relative to that, not to the clock.
+  if (tracking && prefs.routineWait !== false) {
+    for (const tag of daily.dueWaitTags(meds, doses, data.rxRoutineRuns, now, tz)) {
+      push(tag, 'Your wait is up', 'Tap to see what’s next.');
+    }
+  }
+
+  // ── Water ──
+  // Every interval after the first dose, until the goal or the cutoff. The tag
+  // moves on with each glass and each missed interval, so an ignored reminder
+  // comes back once per interval rather than once per tick.
+  if (tracking && prefs.water !== false) {
+    const tag = daily.waterReminderTag(data.rxWater, doses, kit.water, now, tz);
+    if (tag) {
+      push(tag, 'Water', 'Time for a glass.', undefined, {
+        actions: WATER_ACTIONS,
+        action: { kind: 'water' },
+      });
+    }
+  }
+
   // ── Running low ──
   if (tracking && prefs.refillLow !== false) {
     for (const med of regimen.activeMeds(meds)) {
@@ -283,7 +313,9 @@ function collectCrashMessages(data, sent, now, tz) {
 }
 
 exports.crashReminders = onSchedule(
-  { schedule: 'every 15 minutes', timeZone: DEFAULT_TZ },
+  // Every five minutes rather than fifteen: a routine's thirty-minute wait
+  // that buzzes at forty-four is not a timer anyone can trust.
+  { schedule: 'every 5 minutes', timeZone: DEFAULT_TZ },
   async () => {
     const now = Date.now();
     const userRefs = await db.collection('users').listDocuments();
