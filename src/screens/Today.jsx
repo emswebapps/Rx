@@ -16,11 +16,11 @@ import ScheduleRow, { DoseSheet, TimeEditor, MedNotesSheet } from '../components
 import { notesForMed } from '../lib/notes.js';
 import { checkInsDue } from '../lib/effects.js';
 import EffectCheckIn from '../components/EffectCheckIn.jsx';
-import { irPresetTarget, withIrRoutines, irPresetLines, IR_PLAN } from '../lib/presets.js';
 import NowCard from '../components/NowCard.jsx';
 import { groupSettled as dosesSettled, afterDoseOpen, formatUntil } from '../lib/next.js';
 import { effectiveWindow } from '../lib/meds.js';
 import { mergeWater, glassesOnDay } from '../lib/water.js';
+import { okMeals } from '../lib/mealLibrary.js';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
@@ -56,7 +56,7 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
-    rxNotes, addRxNote, rxEffects, addEffect, rxMeals, saveRxMeal, updateCrashMed,
+    rxNotes, addRxNote, rxEffects, addEffect, rxMeals,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
@@ -130,8 +130,10 @@ export default function RxHome() {
     return e.expectedAt ?? shiftDay(day, 0) + 12 * 60 * 60 * 1000;
   };
 
-  const take = (e, at) => {
-    logCrashDose(e.medId, at ?? loggedAt(e), { slotId: e.slotId, amount: e.amount });
+  const take = (e, at, meal) => {
+    logCrashDose(e.medId, at ?? loggedAt(e), {
+      slotId: e.slotId, amount: e.amount, ...(meal ? { meal } : {}),
+    });
     setOpenKey(null);
   };
   const skip = (e) => {
@@ -182,17 +184,6 @@ export default function RxHome() {
                 : 'The 30 minutes are up'}
             </span>
           </button>
-        )}
-
-        {/* ── One-time offer: set up the IR routines ── */}
-        {isToday && tracking && (
-          <IrPresetOffer
-            meds={crashMeds}
-            onApply={(med) => {
-              updateCrashMed(med.id, { schedule: withIrRoutines(med) });
-              saveRxMeal([{ name: IR_PLAN.first, status: 'ok' }, { name: IR_PLAN.later, status: 'ok' }]);
-            }}
-          />
         )}
 
         {/* ── The one thing to look at now ── */}
@@ -463,6 +454,7 @@ export default function RxHome() {
           entry={openEntry}
           when={when}
           routineNote={routineNote(routines.get(openEntry.key), Date.now())}
+          meals={okMeals(rxMeals)}
           onClose={() => setOpenKey(null)}
           onTake={take}
           onSkip={skip}
@@ -790,49 +782,3 @@ function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onT
     </div>
   );
 }
-
-const IR_OFFER_KEY = 'rx_ir_preset_dismissed';
-
-/**
- * "Set up your Adderall routines?" — shown once, above everything, until it's
- * applied or dismissed. Nothing changes until the tap: it's the user's
- * schedule, and the preview says exactly what will be written.
- */
-function IrPresetOffer({ meds, onApply }) {
-  const [hidden, setHidden] = useState(() => {
-    try { return Boolean(localStorage.getItem(IR_OFFER_KEY)); } catch { return false; }
-  });
-  const med = irPresetTarget(meds);
-  if (hidden || !med) return null;
-  const dismiss = () => {
-    try { localStorage.setItem(IR_OFFER_KEY, String(Date.now())); } catch { /* shown again next time */ }
-    setHidden(true);
-  };
-
-  return (
-    <div className="app-card" style={{ marginTop: '0.75rem', padding: '0.875rem 1rem', borderColor: 'var(--accent)' }}>
-      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Set up your {med.name} routine?</p>
-      <ul style={{ listStyle: 'none', margin: '0.5rem 0 0.75rem', padding: 0, display: 'grid', gap: '0.25rem' }}>
-        {irPresetLines(med).map((l) => (
-          <li key={l.label} style={{ fontSize: '0.875rem', color: l.already ? 'var(--subtle)' : 'var(--text)' }}>
-            <strong>{l.label}</strong> · {l.already ? 'already set up' : l.text}
-          </li>
-        ))}
-      </ul>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button onClick={() => { onApply(med); dismiss(); }} className="app-btn-primary" style={{ flex: 1 }}>Set up</button>
-        <button
-          onClick={dismiss}
-          style={{
-            padding: '0 1rem', borderRadius: '0.75rem', cursor: 'pointer',
-            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
-            color: 'var(--text)', fontSize: '0.875rem', fontWeight: 700,
-          }}
-        >
-          Not now
-        </button>
-      </div>
-    </div>
-  );
-}
-

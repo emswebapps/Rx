@@ -187,13 +187,17 @@ Tapping the one being eaten checks the meal off, records the food, and starts
 the countdown, all in one write. The routine beside the dose is a single
 line, e.g. *✓ RXBAR → 14:59 → Take*. Tapping the food undoes it.
 
-### Setting up the IR routine
+### What was eaten with a dose
 
-Today offers, once, to set up an Adderall's routines (`src/lib/presets.js`):
-*dose 1: 1 egg → 15 min → take*, then *Ready Clean Bar → 15 min → take* for
-every later dose. It previews exactly what it will write and only applies on
-**Set up**. Doses that already have a routine are left alone, and both meals
-are added to My meals. **Not now** hides it on this device.
+Logging a dose asks **what did you eat with it?** (optional), offering the
+saved meals as buttons. A meal with a pick-one list, like the fat added to
+lunch, then asks which. The choice is stored on the dose as `meal: { name,
+option }`, shown in the dose sheet ("Ate with it: Lunch + Half an avocado"),
+and read by the meal history, the doctor report and the meals CSV.
+
+My meals offers the meal plan in one tap (`PLAN_MEALS`): breakfast, lunch and
+dinner, each with what's in it and its targets. Lunch and dinner come with
+their three fat choices.
 
 ### My meals
 

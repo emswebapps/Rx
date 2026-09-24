@@ -200,7 +200,7 @@ const sheetHeading = {
  * `when` says which day the sheet is for. A day still to come can't be logged —
  * there is nothing to record yet — so it offers only the medication itself.
  */
-export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn, onNotes, noteCount = 0 }) {
+export function DoseSheet({ entry, when, routineNote, meals = [], onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn, onNotes, noteCount = 0 }) {
   const { med, state, expectedAt, amount, dose, entry: logged } = entry;
   const rules = rulesForMed(med);
   const status = statusText(entry);
@@ -237,6 +237,12 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         </span>
         {status && <span style={{ fontWeight: 700, color: tone.color }}>{status}</span>}
       </div>
+
+      {dose && dose.meal && dose.meal.name && (
+        <p style={{ fontSize: '0.9375rem', color: 'var(--text)', padding: '0.5rem 0' }}>
+          Ate with it: <strong>{dose.meal.option ? `${dose.meal.name} + ${dose.meal.option}` : dose.meal.name}</strong>
+        </p>
+      )}
 
       {/* The small print that used to sit on the card: when it wears off, and
           the half-life as entered. */}
@@ -289,7 +295,8 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
           today={when === 'today'}
           fallback={expectedAt}
           onCancel={() => setPicking(false)}
-          onConfirm={(at) => onTake(entry, at)}
+          meals={meals}
+          onConfirm={(at, meal) => onTake(entry, at, meal)}
         />
       ) : (
       <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1.5rem' }}>
@@ -337,7 +344,7 @@ const hhmm = (ts) => { const d = new Date(ts); return `${pad2(d.getHours())}:${p
  * point there is filling in a day already gone. A time later than now on
  * today means this morning, not tonight — the same rule as TimeEditor.
  */
-function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
+function TakeTimePicker({ today, fallback, meals = [], onCancel, onConfirm }) {
   const start = today ? Date.now() : (fallback ?? Date.now());
   const [value, setValue] = useState(hhmm(start));
 
@@ -349,6 +356,12 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
     return d.getTime();
   };
   const ago = (min) => setValue(hhmm(Date.now() - min * 60 * 1000));
+  // What was eaten with it: one of the saved meals (and its option, if it
+  // has a pick-one list), or nothing. Optional — "Log it" works either way.
+  const [meal, setMeal] = useState(null);
+  const [option, setOption] = useState(null);
+  const picked = meals.find((m) => m.id === meal) || null;
+  const pickMeal = (id) => { setMeal(meal === id ? null : id); setOption(null); };
 
   return (
     <div style={{ marginTop: '1.25rem' }}>
@@ -380,6 +393,32 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
           ))}
         </div>
       )}
+      {meals.length > 0 && (
+        <>
+          <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '1rem 0 0.5rem' }}>
+            What did you eat with it?
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {meals.map((m) => (
+              <Chip key={m.id} on={meal === m.id} onClick={() => pickMeal(m.id)}>{m.name}</Chip>
+            ))}
+          </div>
+          {picked && picked.detail && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.375rem' }}>{picked.detail}</p>
+          )}
+          {picked && picked.options.length > 0 && (
+            <>
+              <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--muted)', margin: '0.5rem 0 0.375rem' }}>With</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                {picked.options.map((o) => (
+                  <Chip key={o} on={option === o} onClick={() => setOption(option === o ? null : o)}>{o}</Chip>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button
           onClick={onCancel}
@@ -391,12 +430,34 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
         >
           Back
         </button>
-        <button onClick={() => onConfirm(resolve())} className="app-btn-primary" style={{ flex: 1, fontSize: '1rem' }}>
+        <button
+          onClick={() => onConfirm(resolve(), picked ? { name: picked.name, option: option || null } : null)}
+          className="app-btn-primary"
+          style={{ flex: 1, fontSize: '1rem' }}
+        >
           <Check size={17} style={{ verticalAlign: '-3px', marginRight: '0.375rem' }} />
           Log it
         </button>
       </div>
     </div>
+  );
+}
+
+function Chip({ on, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      style={{
+        padding: '0.5rem 0.875rem', borderRadius: '9999px', cursor: 'pointer',
+        backgroundColor: on ? 'var(--accent)' : 'var(--surface2)',
+        border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+        color: on ? '#fff' : 'var(--text)', fontSize: '0.9375rem', fontWeight: 700,
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -408,7 +469,7 @@ function RoundAction({ Icon, label, onClick, primary = false }) {
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-        minWidth: '4.5rem', WebkitTapHighlightColor: 'transparent',
+        minWidth: '3.75rem', maxWidth: '5rem', WebkitTapHighlightColor: 'transparent',
       }}
     >
       <span style={{
@@ -419,7 +480,7 @@ function RoundAction({ Icon, label, onClick, primary = false }) {
       }}>
         <Icon size={primary ? 30 : 22} strokeWidth={primary ? 2.75 : 2} />
       </span>
-      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: primary ? 'var(--accent-text)' : 'var(--muted)' }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: primary ? 'var(--accent-text)' : 'var(--muted)', textAlign: 'center', lineHeight: 1.2 }}>
         {label}
       </span>
     </button>
