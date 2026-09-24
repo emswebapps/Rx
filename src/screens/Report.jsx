@@ -12,6 +12,7 @@ import { suggestedOnsetForMed, formatHours } from '../lib/window.js';
 import { effectCurve, peakAndDrop, sideEffectCounts } from '../lib/effects.js';
 import { signTimings } from '../lib/behaviors.js';
 import { notesForMed, pinnedNotes } from '../lib/notes.js';
+import { mealLog } from '../lib/meals.js';
 import { formatClock, formatDayLong } from '../lib/time.js';
 import { ViewHeader, pageStyle } from '../components/medsUi.jsx';
 
@@ -98,6 +99,15 @@ export default function Report() {
                 {miss.length > 0 && (
                   <li>Pill counts that didn’t match: {miss.map((c) => `${formatCountDiff(c.diff)} (${new Date(c.at).toLocaleDateString()})`).join(', ')}</li>
                 )}
+                {(() => {
+                  const meals = mealLog(crashMeds, crashDoses, rxRoutineRuns, rxEffects)
+                    .filter((r) => r.medId === m.id && r.ateAt >= since);
+                  if (meals.length === 0) return null;
+                  const counts = new Map();
+                  for (const r of meals) counts.set(r.food, (counts.get(r.food) || 0) + 1);
+                  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+                  return <li>Eaten before doses: {top.map(([f, n]) => `${f} (${n}×)`).join(', ')}</li>;
+                })()}
                 {notesForMed(rxNotes, m.id).slice(0, 4).map((n) => <li key={n.id}>Note: {n.text}</li>)}
               </ul>
             </div>

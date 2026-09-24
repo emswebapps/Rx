@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, Share2, Copy, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mergeWater } from '../lib/water.js';
-import { dosesCSV, effectsCSV, fullBackup, exportName } from '../lib/export.js';
+import { dosesCSV, effectsCSV, mealsCSV, fullBackup, exportName } from '../lib/export.js';
 import { CLOUD_FIELDS } from '../utils/storage';
 import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
@@ -245,7 +245,13 @@ export default function SettingsView() {
             build={() => effectsCSV(app.crashMeds, app.rxEffects)}
           />
         </div>
-        <div style={{ marginTop: '0.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <DownloadButton
+            label="Meals (spreadsheet)"
+            name={exportName('meals', 'csv')}
+            type="text/csv"
+            build={() => mealsCSV(app.crashMeds, app.crashDoses, app.rxRoutineRuns, app.rxEffects)}
+          />
           <DownloadButton
             label="Full backup — everything"
             name={exportName('backup', 'json')}

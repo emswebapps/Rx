@@ -6,6 +6,7 @@ import { effectCurve, peakAndDrop, sideEffectCounts, SIDE_EFFECTS, MIN_CURVE_SAM
 import { formatHours } from '../lib/window.js';
 import { formatClock, formatDayRelative } from '../lib/time.js';
 import { Segmented } from '../components/medsUi.jsx';
+import { mealLog, focusByFood } from '../lib/meals.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -16,7 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * weight for one row of bars.
  */
 export default function EffectsHistory() {
-  const { crashMeds, crashDoses, rxEffects, deleteEffect } = useApp();
+  const { crashMeds, crashDoses, rxEffects, deleteEffect, rxRoutineRuns } = useApp();
   const meds = activeMeds(crashMeds);
   const [medId, setMedId] = useState(meds[0]?.id || null);
   const med = meds.find((m) => m.id === medId) || meds[0] || null;
@@ -86,6 +87,8 @@ export default function EffectsHistory() {
         )}
       </div>
 
+      <MealsSection rows={mealLog(crashMeds, crashDoses, rxRoutineRuns, rxEffects).filter((r) => r.medId === med.id)} />
+
       <p style={{ ...heading, marginTop: '1.5rem' }}>SIDE EFFECTS · LAST 30 DAYS</p>
       {sides.items.length === 0 ? (
         <p style={{ fontSize: '0.875rem', color: 'var(--subtle)' }}>None ticked in {sides.checkIns} check-ins.</p>
@@ -133,6 +136,56 @@ export default function EffectsHistory() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * What you ate before this medication, and — where there's a check-in to go
+ * on — how focused that dose left you. Just your own numbers side by side.
+ */
+function MealsSection({ rows }) {
+  const byFood = focusByFood(rows);
+  if (rows.length === 0) {
+    return (
+      <>
+        <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS BEFORE DOSES</p>
+        <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', lineHeight: 1.5 }}>
+          Add a meal step to this medication’s routine (Meds → the dose time → Routine) and each one you tick off shows up here.
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS BEFORE DOSES</p>
+      {byFood.length > 0 && (
+        <div className="app-card" style={{ padding: '0.75rem 1rem', marginBottom: '0.625rem' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.375rem' }}>Average focus after each meal</p>
+          {byFood.map((f) => (
+            <div key={f.food} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.875rem', padding: '0.125rem 0' }}>
+              <span style={{ flex: 1, color: 'var(--text)' }}>{f.food}</span>
+              <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{f.focus}</strong>
+              <span style={{ color: 'var(--subtle)', fontSize: '0.75rem' }}>/5 · {f.n} doses</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'grid', gap: '0.375rem' }}>
+        {rows.slice(0, 14).map((r) => (
+          <div key={r.id} className="app-card" style={{ padding: '0.625rem 0.875rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text)', fontWeight: 600 }}>
+              {r.food}
+              {r.changed && <span style={{ color: 'var(--subtle)', fontWeight: 400 }}> (instead of {r.planned})</span>}
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>
+              {formatDayRelative(r.ateAt)} {formatClock(r.ateAt)} · dose {r.doseNumber}
+              {r.minutesBefore != null ? ` taken ${r.minutesBefore} min later` : ' · no dose logged'}
+              {r.focus != null ? ` · focus ${r.focus}/5` : ''}
+            </p>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

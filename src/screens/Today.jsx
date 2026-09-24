@@ -51,7 +51,7 @@ export default function RxHome() {
     crashMeds, crashDoses, crashKit, crashSessions,
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
-    rxRoutineRuns, checkRoutineStep, rxWater, addWater, undoWater,
+    rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
     rxNotes, addRxNote, rxEffects, addEffect,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
@@ -233,6 +233,7 @@ export default function RxHome() {
                           routine={routine}
                           when={when}
                           onToggleStep={(stepId, at) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, at)}
+                          onAte={(stepId, text) => setRoutineAte(day, entry.medId, entry.slotId, stepId, text)}
                           onTake={() => take(entry)}
                           onOpenDose={() => setOpenKey(entry.key)}
                         />

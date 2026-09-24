@@ -10,6 +10,7 @@
 
 import { normalizeMed, expectedDosesOnDay, startOfDay } from './meds.js';
 import { SIDE_EFFECTS } from './effects.js';
+import { mealLog } from './meals.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -72,6 +73,17 @@ export function effectsCSV(meds, effects) {
         e.focus ?? '', e.mood ?? '', e.appetite ?? '',
         (e.sideEffects || []).map((id) => labels.get(id) || id).join('; '), e.note || '',
       ]),
+  );
+}
+
+/** Every meal ticked off in a routine, oldest first. */
+export function mealsCSV(meds, doses, runs, effects) {
+  return toCSV(
+    ['date', 'time', 'medication', 'dose', 'ate', 'planned', 'minutes before dose', 'focus'],
+    mealLog(meds, doses, runs, effects).reverse().map((r) => [
+      date(r.ateAt), time(r.ateAt), r.medName, r.doseNumber, r.food, r.planned,
+      r.minutesBefore ?? '', r.focus ?? '',
+    ]),
   );
 }
 

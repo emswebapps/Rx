@@ -611,3 +611,17 @@ test('answered, dismissed, or switched off, it stays quiet', () => {
   const off = withRegimen({ crashMeds: [XR], notifPrefs: { crash: { ...ALL_ON, effectCheckIn: false } } });
   assert.deepStrictEqual(effectTags(collectCrashMessages(off, {}, localAt(9, 35), TZ)), []);
 });
+
+test('a meal step starts the wait after it, like any other step', () => {
+  const MEAL_XR = {
+    ...XR,
+    schedule: { times: [{ id: 't1', mode: 'clock', time: '08:00', routine: [
+      { id: 'eat', kind: 'meal', text: '2 eggs' }, { id: 'w', kind: 'wait', minutes: 15 }, { id: 'd', kind: 'dose' }] }] },
+  };
+  const data = withRegimen({
+    crashMeds: [MEAL_XR], crashDoses: [],
+    rxRoutineRuns: [{ id: '2026-07-26|xr|t1', day: '2026-07-26', done: { eat: localAt(7, 40) }, ate: { eat: 'Toast' } }],
+  });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 50), TZ)), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 56), TZ)), [WAIT_TAG]);
+});

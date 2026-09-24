@@ -144,6 +144,16 @@ medication. But the step is marked *before the wait was up* and the routine
 doesn't count as followed. The check-offs live in `rxRoutineRuns`.
 `src/lib/routine.js` has the logic.
 
+### Meals
+
+A routine step can be a **meal**: *2 eggs → wait 15 min → take*, or
+*protein bar + string cheese → take* for the second dose. One tap says it was
+eaten as planned. **Had something else?** records what it really was
+(`ate` on the routine run). History → Effects lists the meals before each
+dose, how long before the dose each was eaten, and the average focus after
+each food where a check-in was answered (`src/lib/meals.js`). Meals are also
+in the doctor report and have their own CSV download.
+
 ### Water
 
 Switched on in Settings: a glass counter on Today, one tap per glass (hold to

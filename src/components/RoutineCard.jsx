@@ -1,4 +1,5 @@
-import { Check, Hourglass, Pill as PillGlyph, Lock } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Hourglass, Pill as PillGlyph, Lock, Utensils } from 'lucide-react';
 import { useNow } from '../lib/useCountdown.js';
 import { formatClock } from '../lib/time.js';
 import { routineState, formatCountdown } from '../lib/routine.js';
@@ -15,7 +16,7 @@ import { routineState, formatCountdown } from '../lib/routine.js';
  * dose card's own Take — tapping it goes through the same path, so there is
  * one record of having taken something.
  */
-export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpenDose }) {
+export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpenDose, onAte }) {
   const waiting = routine.steps.some((s) => s.state === 'waiting');
   // A second-by-second clock only while a wait is actually running.
   const now = useNow({ tick: 1000, active: waiting && when === 'today' });
@@ -54,6 +55,7 @@ export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpe
             readOnly={readOnly}
             medName={routine.entry.med.name}
             onToggle={() => onToggleStep(step.id, step.state === 'done' ? null : Date.now())}
+            onAte={onAte ? (text) => onAte(step.id, text) : null}
             onTake={onTake}
             onOpenDose={onOpenDose}
           />
@@ -66,7 +68,7 @@ export default function RoutineCard({ routine, when, onToggleStep, onTake, onOpe
 function Marker({ step }) {
   const done = step.state === 'done';
   const current = step.state === 'active' || step.state === 'waiting';
-  const Icon = step.kind === 'wait' ? Hourglass : step.kind === 'dose' ? PillGlyph : null;
+  const Icon = step.kind === 'wait' ? Hourglass : step.kind === 'dose' ? PillGlyph : step.kind === 'meal' ? Utensils : null;
   return (
     <span style={{
       width: '1.75rem', height: '1.75rem', borderRadius: '9999px', flexShrink: 0,
@@ -80,7 +82,7 @@ function Marker({ step }) {
   );
 }
 
-function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose }) {
+function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose, onAte }) {
   const done = step.state === 'done';
   const locked = step.state === 'locked';
   const faded = locked ? 0.55 : 1;
@@ -166,6 +168,10 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose }) {
     );
   }
 
+  if (step.kind === 'meal') {
+    return <MealStep step={step} readOnly={readOnly} faded={faded} onToggle={onToggle} onAte={onAte} />;
+  }
+
   // A task.
   return (
     <li>
@@ -202,3 +208,79 @@ function Step({ step, now, readOnly, medName, onToggle, onTake, onOpenDose }) {
     </li>
   );
 }
+
+/**
+ * A meal: one tap says "ate it, as planned". If it wasn't what the routine
+ * says — a bagel instead of two eggs — "Had something else?" records what it
+ * actually was, because that's the difference worth seeing later.
+ */
+function MealStep({ step, readOnly, faded, onToggle, onAte }) {
+  const done = step.state === 'done';
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(step.ate || '');
+  const save = () => { onAte?.(text); setEditing(false); };
+
+  return (
+    <li>
+      <button
+        onClick={readOnly ? undefined : onToggle}
+        disabled={readOnly}
+        aria-pressed={done}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+          padding: '0.375rem 0', background: 'none', border: 'none', textAlign: 'left',
+          cursor: readOnly ? 'default' : 'pointer', opacity: faded,
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <Marker step={step} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{
+            display: 'block', fontSize: '0.9375rem', fontWeight: 600,
+            color: done ? 'var(--subtle)' : 'var(--text)',
+          }}>
+            {done && step.ate ? step.ate : step.text}
+          </span>
+          {done && (
+            <span style={{ display: 'block', fontSize: '0.8125rem', color: step.early ? 'var(--warn)' : 'var(--subtle)' }}>
+              Ate at {formatClock(step.doneAt)}
+              {step.ate ? ` · instead of ${step.text}` : ''}
+              {step.early ? ' · before the wait was up' : ''}
+            </span>
+          )}
+        </span>
+        {!readOnly && !done && step.state === 'active' && (
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)' }}>Tap when eaten</span>
+        )}
+      </button>
+
+      {done && !readOnly && onAte && (editing ? (
+        <div style={{ display: 'flex', gap: '0.375rem', margin: '0.25rem 0 0.375rem 2.5rem' }}>
+          <input
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+            placeholder="What did you have?"
+            className="app-input"
+            style={{ flex: 1, minWidth: 0, padding: '0.4375rem 0.625rem', fontSize: '0.875rem' }}
+          />
+          <button onClick={save} className="app-btn-primary" style={{ padding: '0.4375rem 0.875rem', fontSize: '0.8125rem' }}>
+            Save
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => { setText(step.ate || ''); setEditing(true); }}
+          style={{
+            margin: '0 0 0.25rem 2.5rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.8125rem', fontWeight: 700, color: 'var(--accent-text)',
+          }}
+        >
+          {step.ate ? 'Change what I had' : 'Had something else?'}
+        </button>
+      ))}
+    </li>
+  );
+}
+

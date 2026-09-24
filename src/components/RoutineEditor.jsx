@@ -1,4 +1,4 @@
-import { Plus, X, ChevronUp, ChevronDown, Hourglass, Pill, ListChecks } from 'lucide-react';
+import { Plus, X, ChevronUp, ChevronDown, Hourglass, Pill, ListChecks, Utensils } from 'lucide-react';
 import { routinePreset } from '../lib/routine.js';
 
 /**
@@ -16,8 +16,17 @@ export default function RoutineEditor({ routine, onChange }) {
   if (steps.length === 0) {
     return (
       <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => onChange(routinePreset(15))} style={chip(true)}>
+          <ListChecks size={14} /> Meal → wait 15 min → take
+        </button>
         <button onClick={() => onChange(routinePreset(30))} style={chip(true)}>
-          <ListChecks size={14} /> Eat → wait 30 min → take
+          <ListChecks size={14} /> Meal → wait 30 min → take
+        </button>
+        <button
+          onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'meal', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
+          style={chip(true)}
+        >
+          <Utensils size={14} /> Meal → take
         </button>
         <button
           onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'task', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
@@ -83,11 +92,23 @@ export default function RoutineEditor({ routine, onChange }) {
                 />
                 min
               </span>
+            ) : s.kind === 'meal' ? (
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <Utensils size={14} style={{ color: 'var(--accent-text)', flexShrink: 0 }} />
+                <input
+                  value={s.text || ''}
+                  onChange={(e) => update(s.id, { text: e.target.value })}
+                  placeholder="What you eat — e.g. 2 eggs"
+                  className="app-input"
+                  style={{ flex: 1, minWidth: 0, padding: '0.375rem 0.5rem' }}
+                  aria-label={`Meal, step ${i + 1}`}
+                />
+              </span>
             ) : (
               <input
                 value={s.text || ''}
                 onChange={(e) => update(s.id, { text: e.target.value })}
-                placeholder="3 eggs"
+                placeholder="Something to do"
                 className="app-input"
                 style={{ flex: 1, minWidth: 0, padding: '0.375rem 0.5rem' }}
                 aria-label={`Step ${i + 1}`}
@@ -102,6 +123,9 @@ export default function RoutineEditor({ routine, onChange }) {
         ))}
       </ol>
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => insert({ id: `s-${stamp()}`, kind: 'meal', text: '' })} style={chip(false)}>
+          <Utensils size={14} /> Meal
+        </button>
         <button onClick={() => insert({ id: `s-${stamp()}`, kind: 'task', text: '' })} style={chip(false)}>
           <Plus size={14} /> Step
         </button>

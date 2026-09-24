@@ -5,7 +5,7 @@ import { generateId } from '../utils/id';
 import { createSession, defaultReleaseAt } from '../lib/protocol.js';
 import { pruneSessions } from '../lib/stats.js';
 import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/meds.js';
-import { markStep, pruneRuns } from '../lib/routine.js';
+import { markStep, markAte, pruneRuns } from '../lib/routine.js';
 import { addGlass, removeLastGlass } from '../lib/water.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
@@ -446,6 +446,11 @@ export function AppProvider({ children, uid }) {
     if (uid) saveUserData(uid, { rxRoutineRuns: next });
   }, [persist, uid]);
 
+  /** What was actually eaten at a meal step, when it wasn't the plan. */
+  const setRoutineAte = useCallback((dayTs, medId, slotId, stepId, text) => {
+    persist('rxRoutineRuns', markAte(stateRef.current.rxRoutineRuns, dayTs, medId, slotId, stepId, text));
+  }, [persist]);
+
   // ── Water ───────────────────────────────────────────────────────────────
 
   const addWater = useCallback((at = Date.now()) => {
@@ -533,7 +538,7 @@ export function AppProvider({ children, uid }) {
       crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose, unlogCrashDose,
       crashMeds, addCrashMed, updateCrashMed, deleteCrashMed, refillCrashMed,
       crashBehaviors, addCrashBehavior, deleteCrashBehavior, checkInCrash,
-      rxRoutineRuns, checkRoutineStep,
+      rxRoutineRuns, checkRoutineStep, setRoutineAte,
       rxWater, addWater, undoWater,
       rxClientSent, markClientSent,
       rxEffects, addEffect, deleteEffect, recordPillCount,

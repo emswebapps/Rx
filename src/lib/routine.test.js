@@ -57,7 +57,7 @@ test('two waits in a row are one longer wait, and a second dose step is dropped'
 });
 
 test('the preset is eat, wait, take', () => {
-  assert.deepStrictEqual(routinePreset(30).map((x) => x.kind), ['task', 'wait', 'dose']);
+  assert.deepStrictEqual(routinePreset(30).map((x) => x.kind), ['meal', 'wait', 'dose']);
   assert.strictEqual(routinePreset(45)[1].minutes, 45);
 });
 
