@@ -69,6 +69,20 @@ const IR3 = {
   rules: [], active: true,
 };
 
+// Every three days, counting from a Wednesday — so due on Saturday 29th and
+// supplied for two doses, which runs out on the 4th.
+const EVERY3 = {
+  id: 'e3', name: 'Every third day', form: 'capsule',
+  schedule: { times: [{ id: 'd', mode: 'clock', time: '09:00', amount: 1 }], every: 3, start: '2026-08-26' },
+  graceMinutes: 60, supply: { onHand: 2, lowDays: 7, refillFrom: '2026-09-10' }, rules: [], active: true,
+};
+// Once a week, Saturdays.
+const WEEKLY = {
+  id: 'vd', name: 'Vitamin D', form: 'capsule',
+  schedule: { times: [{ id: 'd', mode: 'clock', time: '10:00', amount: 1 }], days: [6] },
+  graceMinutes: 120, supply: { onHand: 3, lowDays: 7, refillFrom: '' }, rules: [], active: true,
+};
+
 const KIT = { onsetHours: 4, durationHours: 5 };
 const MEDS = [XR, IR];
 
@@ -194,6 +208,27 @@ const cases = [
       { id: 'd1', takenAt: at(8, 16), medId: 'ir3', status: 'taken', slotId: 's1' },
       { id: 'd2', takenAt: at(12, 20), medId: 'ir3', status: 'skipped', slotId: 's2' },
     ],
+    kit: KIT,
+  },
+  {
+    name: 'every three days: due on the third day from the start, with supply counted in those days',
+    now: at(8),
+    meds: [EVERY3, WEEKLY],
+    doses: [],
+    kit: KIT,
+  },
+  {
+    name: 'every three days: not due the day after',
+    now: at(8) + 24 * H,
+    meds: [EVERY3, { ...WEEKLY, schedule: { ...WEEKLY.schedule, days: [0] } }],
+    doses: [],
+    kit: KIT,
+  },
+  {
+    name: 'every three days: before the start date, nothing is due',
+    now: at(8),
+    meds: [{ ...EVERY3, schedule: { ...EVERY3.schedule, start: '2026-09-01' } }],
+    doses: [],
     kit: KIT,
   },
   {

@@ -31,6 +31,9 @@ reach for is entering the same medication twice.
   still due.
 - A time can hang off another medication instead of the clock — *"six hours
   after the morning one"* — in which case a late morning drags it late too.
+- **How often** is every day, some days of the week (weekdays, Mon & Fri,
+  once a week on Sundays…), or **every N days** counting from a start date
+  (`schedule.every` / `schedule.start`, ported to `functions/regimen.js`).
 - Days off are first-class. A weekdays-only medication is simply not due at the
   weekend: it produces no rows, so a deliberate drug holiday can never read as
   two missed doses or break a streak.
