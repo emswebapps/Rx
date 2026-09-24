@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, Share2, Copy, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mergeWater } from '../lib/water.js';
-import { dosesCSV, effectsCSV, fullBackup, exportName } from '../lib/export.js';
+import { dosesCSV, effectsCSV, mealsCSV, fullBackup, exportName } from '../lib/export.js';
 import { CLOUD_FIELDS } from '../utils/storage';
 import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
@@ -227,6 +227,26 @@ export default function SettingsView() {
       </div>
 
       <div style={section}>
+        <h2 style={h2}>MY MEALS</h2>
+        <button
+          onClick={() => navigate('/meals')}
+          style={{
+            width: '100%', padding: '0.875rem 1rem', borderRadius: '0.875rem', cursor: 'pointer', textAlign: 'left',
+            backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
+            fontSize: '0.9375rem', fontWeight: 700, display: 'flex', alignItems: 'center',
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            Meals that work with my dose
+            <span style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 400, color: 'var(--subtle)' }}>
+              {(app.rxMeals || []).length ? `${app.rxMeals.length} saved` : 'Save them once, pick them every day'}
+            </span>
+          </span>
+          <ChevronRight size={18} style={{ color: 'var(--muted)' }} />
+        </button>
+      </div>
+
+      <div style={section}>
         <h2 style={h2}>FOR MY DOCTOR, AND MY DATA</h2>
         <button onClick={() => navigate('/report')} className="app-btn-primary" style={{ width: '100%', marginBottom: '0.625rem' }}>
           Doctor visit report
@@ -245,7 +265,13 @@ export default function SettingsView() {
             build={() => effectsCSV(app.crashMeds, app.rxEffects)}
           />
         </div>
-        <div style={{ marginTop: '0.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <DownloadButton
+            label="Meals (spreadsheet)"
+            name={exportName('meals', 'csv')}
+            type="text/csv"
+            build={() => mealsCSV(app.crashMeds, app.crashDoses, app.rxRoutineRuns, app.rxEffects)}
+          />
           <DownloadButton
             label="Full backup — everything"
             name={exportName('backup', 'json')}

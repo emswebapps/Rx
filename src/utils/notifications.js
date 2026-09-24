@@ -63,6 +63,25 @@ export function sendNotification(title, options = {}) {
   }
 }
 
+/**
+ * Take down notifications with this tag, from every worker that might have
+ * shown them — the app's own and the push worker, which live at different
+ * scopes. Used to clear a pinned wait once the dose is taken, so the lock
+ * screen never shows a timer for something already done.
+ */
+export async function closeNotifications(tag) {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      const list = await reg.getNotifications({ tag });
+      for (const n of list) n.close();
+    }
+  } catch {
+    // Nothing to close, or the browser won't say — either way nothing to do.
+  }
+}
+
 // ── Shift notification scheduling ──────────────────────────────────────────
 
 const shiftNotifTimers = {};

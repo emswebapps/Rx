@@ -30,6 +30,7 @@ export const RUN_KEEP_DAYS = 35;
 
 export const STEP_KINDS = [
   { key: 'task', label: 'Do something' },
+  { key: 'meal', label: 'Eat' },
   { key: 'wait', label: 'Wait' },
   { key: 'dose', label: 'Take it' },
 ];
@@ -38,10 +39,10 @@ export const STEP_KINDS = [
  * The shape most stimulant routines take, one tap away in the editor. The
  * words are placeholders to type over, not advice about what to eat.
  */
-export function routinePreset(minutes = 30) {
+export function routinePreset(minutes = 30, food = '') {
   const stamp = Date.now().toString(36);
   return [
-    { id: `s-eat-${stamp}`, kind: 'task', text: 'Eat' },
+    { id: `s-eat-${stamp}`, kind: 'meal', text: food },
     { id: `s-wait-${stamp}`, kind: 'wait', minutes },
     { id: `s-dose-${stamp}`, kind: 'dose' },
   ];
@@ -83,7 +84,9 @@ export function routineSteps(slot) {
       if (prev.kind === 'wait') { prev.minutes += minutes; return; }
       out.push({ id, kind: 'wait', minutes });
     } else {
-      out.push({ id, kind: 'task', text: String(s.text || '').trim() || 'Step' });
+      // A meal is a task that also remembers what was eaten — see markAte.
+      const meal = s.kind === 'meal';
+      out.push({ id, kind: meal ? 'meal' : 'task', text: String(s.text || '').trim() || (meal ? 'Eat' : 'Step') });
     }
   });
   if (!haveDose) out.push({ id: 'dose', kind: 'dose' });
@@ -180,7 +183,8 @@ export function routineState(steps, run, dose, now = Date.now()) {
     const early = Boolean(doneAt != null && step.kind !== 'wait'
       && prev && prev.kind === 'wait' && prev.endsAt != null && doneAt < prev.endsAt);
 
-    out.push({ ...step, state, doneAt, endsAt, early });
+    const ate = step.kind === 'meal' && run && run.ate && run.ate[step.id] ? run.ate[step.id] : null;
+    out.push({ ...step, state, doneAt, endsAt, early, ate });
     if (state !== 'done') allBeforeDone = false;
   }
 
@@ -212,6 +216,21 @@ export function markStep(runs, dayTs, medId, slotId, stepId, at = Date.now()) {
     ...(existing || { id, day: dayKey(dayTs), medId, slotId }),
     done: doneMap,
   };
+  return existing ? list.map((r) => (r.id === id ? next : r)) : [next, ...list];
+}
+
+/**
+ * What was actually eaten at a meal step, when it wasn't what the routine
+ * says. Null clears it back to "as planned".
+ */
+export function markAte(runs, dayTs, medId, slotId, stepId, text) {
+  const list = Array.isArray(runs) ? runs.filter(Boolean) : [];
+  const id = runId(dayTs, medId, slotId);
+  const existing = list.find((r) => r.id === id);
+  const ate = { ...((existing && existing.ate) || {}) };
+  const t = String(text || '').trim();
+  if (t) ate[stepId] = t; else delete ate[stepId];
+  const next = { ...(existing || { id, day: dayKey(dayTs), medId, slotId, done: {} }), ate };
   return existing ? list.map((r) => (r.id === id ? next : r)) : [next, ...list];
 }
 

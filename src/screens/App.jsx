@@ -3,11 +3,12 @@ import { Routes, Route, Navigate, useNavigate, useSearchParams, useLocation } fr
 import { useApp } from '../context/AppContext';
 import { activeSession, staleSessions, isTimerDone } from '../lib/protocol.js';
 import { mergeKit } from '../lib/kit.js';
-import { sendNotification } from '../utils/notifications';
+import { sendNotification, closeNotifications } from '../utils/notifications';
+import { formatClock } from '../lib/time.js';
 import { useBack } from '../lib/useBack.js';
 import { useNow } from '../lib/useCountdown.js';
 import { expectedDosesToday, normalizeMed } from '../lib/meds.js';
-import { nextWaitEnd, waitTag, dayKey } from '../lib/routine.js';
+import { nextWaitEnd, waitTag, dayKey, routinesForDay, runId } from '../lib/routine.js';
 import { nextWaterDue, waterReminderTag } from '../lib/water.js';
 import { suggestedOnsetForMed } from '../lib/window.js';
 
@@ -20,6 +21,7 @@ import HistoryView from './History.jsx';
 import SettingsView from './Settings.jsx';
 import Notebook from './Notebook.jsx';
 import Report from './Report.jsx';
+import MyMeals from './MyMeals.jsx';
 import CrashScreen from './crash/Crash.jsx';
 import ProtocolRunner from './crash/ProtocolRunner.jsx';
 import AnchorsView from './crash/AnchorsView.jsx';
@@ -85,6 +87,7 @@ export default function RxApp() {
         <Route path="/history" element={<HistoryView />} />
         <Route path="/notes" element={<Notebook />} />
         <Route path="/report" element={<Report />} />
+        <Route path="/meals" element={<MyMeals />} />
         <Route path="/setup" element={<SettingsView />} />
         <Route path="/anchors" element={<AnchorsView onBack={back} />} />
         <Route path="/held" element={<DraftsView onBack={back} />} />
@@ -163,14 +166,53 @@ function DailyReminders() {
     : null;
   const waitKey = wait ? waitTag(wait.runId, wait.stepId) : null;
 
+  // While a wait runs, a notification stays pinned with the time it ends, so
+  // putting the phone down after eating doesn't mean losing track of it. It
+  // is silent — the buzz is saved for when the wait is actually up. Shown once
+  // per wait per session, so dismissing it isn't undone by reopening the app.
+  // (A web notification can't tick, so it carries the end time, not a count.)
+  useEffect(() => {
+    if (!wait || rxClientSent[waitKey] || wait.endsAt <= Date.now()) return;
+    const pinTag = `${waitKey}-pin`;
+    try {
+      if (sessionStorage.getItem(pinTag)) return;
+      sessionStorage.setItem(pinTag, '1');
+    } catch { /* private mode: pin anyway */ }
+    sendNotification('Timer running', {
+      body: `Take it at ${formatClock(wait.endsAt)}. This stays here until then.`,
+      tag: pinTag, requireInteraction: true, silent: true, data: { url: '/Rx/' },
+    });
+  }, [waitKey, wait?.endsAt]);
+
   useEffect(() => {
     if (!wait || rxClientSent[waitKey]) return undefined;
     const id = setTimeout(() => {
-      sendNotification('Your wait is up', { body: 'Tap to see what’s next.', tag: waitKey, data: { url: '/Rx/' } });
+      closeNotifications(`${waitKey}-pin`);
+      // Stays on screen until it's dealt with, and buzzes — this is the one
+      // that mustn't be missed.
+      sendNotification('Your wait is up', {
+        body: 'Take it now. Tap to log it.', tag: waitKey, requireInteraction: true,
+        renotify: true, vibrate: [250, 120, 250, 120, 250], data: { url: '/Rx/' },
+      });
       markClientSent(waitKey);
     }, Math.max(0, wait.endsAt - Date.now()));
     return () => clearTimeout(id);
   }, [waitKey, wait?.endsAt, rxClientSent[waitKey]]);
+
+  // Once a routine's dose is logged, take down its pinned timer and its
+  // "wait is up" — whichever of them is still on the lock screen.
+  const settledWaits = tracking
+    ? routinesForDay(expectedDosesToday(crashMeds, crashDoses, now), rxRoutineRuns, now, now)
+      .filter((r) => r.steps.some((st) => st.kind === 'dose' && (st.state === 'done' || st.state === 'skipped')))
+      .flatMap((r) => r.steps.filter((st) => st.kind === 'wait').map((st) => waitTag(runId(now, r.medId, r.slotId), st.id)))
+    : [];
+  const settledKey = settledWaits.join(',');
+  useEffect(() => {
+    for (const tag of settledWaits) {
+      closeNotifications(tag);
+      closeNotifications(`${tag}-pin`);
+    }
+  }, [settledKey]);
 
   const waterOn = tracking && prefs.water !== false;
   const waterDue = waterOn ? nextWaterDue(rxWater, crashDoses, kit.water, now) : null;

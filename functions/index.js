@@ -36,6 +36,9 @@ async function sendPush(userPath, token, msg) {
         tag: msg.tag,
         url: msg.url || SITE_BASE_PATH,
         ...(msg.action ? { action: JSON.stringify(msg.action) } : {}),
+        // The worker builds the notification itself, so "keep this on screen"
+        // has to travel as data too.
+        ...(msg.requireInteraction ? { pin: '1' } : {}),
       },
       webpush: {
         // fcmOptions.link has to be absolute — msg.url is a site-relative path,
@@ -265,7 +268,7 @@ function collectCrashMessages(data, sent, now, tz) {
   // checked off, so this fires relative to that, not to the clock.
   if (tracking && prefs.routineWait !== false) {
     for (const tag of daily.dueWaitTags(meds, doses, data.rxRoutineRuns, now, tz)) {
-      push(tag, 'Your wait is up', 'Tap to see what’s next.');
+      push(tag, 'Your wait is up', 'Take it now. Tap to log it.', undefined, { requireInteraction: true });
     }
   }
 

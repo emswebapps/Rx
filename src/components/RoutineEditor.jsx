@@ -1,5 +1,6 @@
-import { Plus, X, ChevronUp, ChevronDown, Hourglass, Pill, ListChecks } from 'lucide-react';
+import { Plus, X, ChevronUp, ChevronDown, Hourglass, Pill, ListChecks, Utensils } from 'lucide-react';
 import { routinePreset } from '../lib/routine.js';
+import MealChips, { AvoidWarning } from './MealChips.jsx';
 
 /**
  * The steps around one dose time, in the order they're done.
@@ -16,8 +17,17 @@ export default function RoutineEditor({ routine, onChange }) {
   if (steps.length === 0) {
     return (
       <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => onChange(routinePreset(15))} style={chip(true)}>
+          <ListChecks size={14} /> Meal → wait 15 min → take
+        </button>
         <button onClick={() => onChange(routinePreset(30))} style={chip(true)}>
-          <ListChecks size={14} /> Eat → wait 30 min → take
+          <ListChecks size={14} /> Meal → wait 30 min → take
+        </button>
+        <button
+          onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'meal', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
+          style={chip(true)}
+        >
+          <Utensils size={14} /> Meal → take
         </button>
         <button
           onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'task', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
@@ -61,10 +71,10 @@ export default function RoutineEditor({ routine, onChange }) {
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.375rem' }}>
         {steps.map((s, i) => (
           <li key={s.id} style={{
-            display: 'flex', alignItems: 'center', gap: '0.375rem',
             padding: '0.375rem 0.375rem 0.375rem 0.625rem', borderRadius: '0.625rem',
             backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
           }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--subtle)', width: '1rem' }}>{i + 1}</span>
             {s.kind === 'dose' ? (
               <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)' }}>
@@ -83,11 +93,23 @@ export default function RoutineEditor({ routine, onChange }) {
                 />
                 min
               </span>
+            ) : s.kind === 'meal' ? (
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <Utensils size={14} style={{ color: 'var(--accent-text)', flexShrink: 0 }} />
+                <input
+                  value={s.text || ''}
+                  onChange={(e) => update(s.id, { text: e.target.value })}
+                  placeholder="What you eat — e.g. 2 eggs"
+                  className="app-input"
+                  style={{ flex: 1, minWidth: 0, padding: '0.375rem 0.5rem' }}
+                  aria-label={`Meal, step ${i + 1}`}
+                />
+              </span>
             ) : (
               <input
                 value={s.text || ''}
                 onChange={(e) => update(s.id, { text: e.target.value })}
-                placeholder="3 eggs"
+                placeholder="Something to do"
                 className="app-input"
                 style={{ flex: 1, minWidth: 0, padding: '0.375rem 0.5rem' }}
                 aria-label={`Step ${i + 1}`}
@@ -98,10 +120,20 @@ export default function RoutineEditor({ routine, onChange }) {
             {s.kind !== 'dose' && (
               <IconBtn label="Remove step" onClick={() => remove(s.id)}><X size={15} /></IconBtn>
             )}
+          </div>
+          {s.kind === 'meal' && (
+            <div style={{ padding: '0.375rem 0 0.125rem 1.375rem' }}>
+              <MealChips selected={s.text} onPick={(name) => update(s.id, { text: name })} max={8} />
+              <AvoidWarning text={s.text} />
+            </div>
+          )}
           </li>
         ))}
       </ol>
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => insert({ id: `s-${stamp()}`, kind: 'meal', text: '' })} style={chip(false)}>
+          <Utensils size={14} /> Meal
+        </button>
         <button onClick={() => insert({ id: `s-${stamp()}`, kind: 'task', text: '' })} style={chip(false)}>
           <Plus size={14} /> Step
         </button>

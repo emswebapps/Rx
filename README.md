@@ -144,6 +144,53 @@ medication. But the step is marked *before the wait was up* and the routine
 doesn't count as followed. The check-offs live in `rxRoutineRuns`.
 `src/lib/routine.js` has the logic.
 
+### Today, at a glance
+
+The top of Today is one card with one clock (`src/lib/next.js`):
+- a running wait, as a live countdown
+- the routine step that's up next, one tap to check off ("Ate it — start the timer")
+- time until the next dose
+- time until the crash window
+- "all done"
+
+Finished dose times fold into a single "done earlier" line. Only the routine
+in play stays open. The check-in is one line that opens in a sheet. Water,
+crash and score are three small tiles, with the full cards under "More
+details".
+
+While a wait runs, a **silent notification stays pinned** with the time it
+ends. When the wait is up it's replaced by one that buzzes and stays until
+dealt with (`requireInteraction`, from the app and from the scheduler's
+push). Both are cleared once the dose is logged. A web notification can't
+tick, so the pin shows the end time rather than a live count. This is the
+one notification that carries a time. It never carries a name.
+
+### Meals
+
+A routine step can be a **meal**: *2 eggs → wait 15 min → take*, or
+*protein bar + string cheese → take* for the second dose. One tap says it was
+eaten as planned. **Had something else?** records what it really was
+(`ate` on the routine run). History → Effects lists the meals before each
+dose, how long before the dose each was eaten, and the average focus after
+each food where a check-in was answered (`src/lib/meals.js`). Meals are also
+in the doctor report and have their own CSV download.
+
+### My meals
+
+Settings → My meals (`/meals`) keeps two lists the user builds: meals that
+**work with my dose**, and ones to **avoid**, each with an optional note
+("vitamin C, pharmacist said skip it"). Rx never marks a food safe or unsafe.
+- The approved meals appear as one-tap chips in the routine editor's meal
+  steps and in "Had something else?" on Today.
+- Anything logged or planned that contains an avoided item is flagged in red,
+  with its note.
+- A meal eaten that isn't on either list can be saved in one tap, unless it
+  contains something avoided.
+- Meals already eaten before doses are offered on the page for quick
+  approval.
+
+The logic is `src/lib/mealLibrary.js`, stored as `rxMeals`.
+
 ### Water
 
 Switched on in Settings: a glass counter on Today, one tap per glass (hold to

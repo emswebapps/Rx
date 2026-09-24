@@ -5,8 +5,9 @@ import { generateId } from '../utils/id';
 import { createSession, defaultReleaseAt } from '../lib/protocol.js';
 import { pruneSessions } from '../lib/stats.js';
 import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/meds.js';
-import { markStep, pruneRuns } from '../lib/routine.js';
+import { markStep, markAte, pruneRuns } from '../lib/routine.js';
 import { addGlass, removeLastGlass } from '../lib/water.js';
+import { saveMeal } from '../lib/mealLibrary.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -67,6 +68,7 @@ export function AppProvider({ children, uid }) {
   const [rxWater, setWater] = useState(() => storage.getWater());
   const [rxClientSent, setClientSent] = useState(() => storage.getClientSent());
   const [rxEffects, setEffects] = useState(() => storage.getEffects());
+  const [rxMeals, setMeals] = useState(() => storage.getMeals());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -76,7 +78,7 @@ export function AppProvider({ children, uid }) {
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
     crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
-    rxRoutineRuns, rxWater, rxClientSent, rxEffects,
+    rxRoutineRuns, rxWater, rxClientSent, rxEffects, rxMeals,
   };
 
   const setters = useRef({
@@ -94,6 +96,7 @@ export function AppProvider({ children, uid }) {
     rxWater: setWater,
     rxClientSent: setClientSent,
     rxEffects: setEffects,
+    rxMeals: setMeals,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -446,6 +449,11 @@ export function AppProvider({ children, uid }) {
     if (uid) saveUserData(uid, { rxRoutineRuns: next });
   }, [persist, uid]);
 
+  /** What was actually eaten at a meal step, when it wasn't the plan. */
+  const setRoutineAte = useCallback((dayTs, medId, slotId, stepId, text) => {
+    persist('rxRoutineRuns', markAte(stateRef.current.rxRoutineRuns, dayTs, medId, slotId, stepId, text));
+  }, [persist]);
+
   // ── Water ───────────────────────────────────────────────────────────────
 
   const addWater = useCallback((at = Date.now()) => {
@@ -478,6 +486,17 @@ export function AppProvider({ children, uid }) {
 
   const deleteEffect = useCallback((id) => {
     persist('rxEffects', stateRef.current.rxEffects.filter((e) => e.id !== id));
+  }, [persist]);
+
+  // ── My meals ────────────────────────────────────────────────────────────
+
+  /** Add a meal, or update the saved one with the same name. */
+  const saveRxMeal = useCallback((meal) => {
+    persist('rxMeals', saveMeal(stateRef.current.rxMeals, meal, generateId()));
+  }, [persist]);
+
+  const deleteRxMeal = useCallback((id) => {
+    persist('rxMeals', stateRef.current.rxMeals.filter((m) => m.id !== id));
   }, [persist]);
 
   // ── Pill counts ─────────────────────────────────────────────────────────
@@ -533,10 +552,11 @@ export function AppProvider({ children, uid }) {
       crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose, unlogCrashDose,
       crashMeds, addCrashMed, updateCrashMed, deleteCrashMed, refillCrashMed,
       crashBehaviors, addCrashBehavior, deleteCrashBehavior, checkInCrash,
-      rxRoutineRuns, checkRoutineStep,
+      rxRoutineRuns, checkRoutineStep, setRoutineAte,
       rxWater, addWater, undoWater,
       rxClientSent, markClientSent,
       rxEffects, addEffect, deleteEffect, recordPillCount,
+      rxMeals, saveRxMeal, deleteRxMeal,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}
