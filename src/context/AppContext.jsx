@@ -5,6 +5,8 @@ import { generateId } from '../utils/id';
 import { createSession, defaultReleaseAt } from '../lib/protocol.js';
 import { pruneSessions } from '../lib/stats.js';
 import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/meds.js';
+import { markStep, pruneRuns } from '../lib/routine.js';
+import { addGlass, removeLastGlass } from '../lib/water.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -61,6 +63,9 @@ export function AppProvider({ children, uid }) {
   const [crashMeds, setMeds] = useState(() => storage.getMeds());
   const [crashBehaviors, setBehaviors] = useState(() => storage.getBehaviors());
   const [rxNotes, setNotes] = useState(() => storage.getNotes());
+  const [rxRoutineRuns, setRoutineRuns] = useState(() => storage.getRoutineRuns());
+  const [rxWater, setWater] = useState(() => storage.getWater());
+  const [rxClientSent, setClientSent] = useState(() => storage.getClientSent());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -70,6 +75,7 @@ export function AppProvider({ children, uid }) {
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
     crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
+    rxRoutineRuns, rxWater, rxClientSent,
   };
 
   const setters = useRef({
@@ -83,6 +89,9 @@ export function AppProvider({ children, uid }) {
     crashMeds: setMeds,
     crashBehaviors: setBehaviors,
     rxNotes: setNotes,
+    rxRoutineRuns: setRoutineRuns,
+    rxWater: setWater,
+    rxClientSent: setClientSent,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -144,6 +153,9 @@ export function AppProvider({ children, uid }) {
       crashDoses: st.crashDoses,
       crashBehaviors: st.crashBehaviors,
       rxNotes: st.rxNotes,
+      rxRoutineRuns: st.rxRoutineRuns,
+      rxWater: st.rxWater,
+      rxClientSent: st.rxClientSent,
     });
   }, [uid]);
 
@@ -420,7 +432,48 @@ export function AppProvider({ children, uid }) {
     ));
   }, [persist]);
 
+  // ── The routine around a dose ───────────────────────────────────────────
+  // A step's check-off time is what starts the wait after it, so it is
+  // recorded as it happens and flushed straight away: the phone is about to be
+  // put down for thirty minutes.
+
+  const checkRoutineStep = useCallback((dayTs, medId, slotId, stepId, at = Date.now()) => {
+    const next = pruneRuns(markStep(stateRef.current.rxRoutineRuns, dayTs, medId, slotId, stepId, at));
+    persist('rxRoutineRuns', next);
+    if (uid) saveUserData(uid, { rxRoutineRuns: next });
+  }, [persist, uid]);
+
+  // ── Water ───────────────────────────────────────────────────────────────
+
+  const addWater = useCallback((at = Date.now()) => {
+    persist('rxWater', addGlass(stateRef.current.rxWater, at));
+  }, [persist]);
+
+  const undoWater = useCallback(() => {
+    persist('rxWater', removeLastGlass(stateRef.current.rxWater));
+  }, [persist]);
+
+  /** Note a reminder this device showed, so the scheduler doesn't repeat it. */
+  const markClientSent = useCallback((tag, at = Date.now()) => {
+    const kept = Object.fromEntries(Object.entries(stateRef.current.rxClientSent || {})
+      .filter(([, ts]) => typeof ts === 'number' && at - ts < 2 * 24 * 60 * 60 * 1000));
+    const next = { ...kept, [tag]: at };
+    persist('rxClientSent', next);
+    if (uid) saveUserData(uid, { rxClientSent: next });
+  }, [persist, uid]);
+
   // ── Warning-sign check-ins ──────────────────────────────────────────────
+
+  /**
+   * "I'm in the window and I'm OK." A check-in with no signs ticked is still a
+   * check-in — meeting the crash on purpose is the habit being scored, not
+   * having something wrong.
+   */
+  const checkInCrash = useCallback((at = Date.now()) => {
+    const entry = { id: generateId(), at, signIds: [], source: 'ok' };
+    persist('crashBehaviors', [entry, ...stateRef.current.crashBehaviors]);
+    return entry;
+  }, [persist]);
 
   const addCrashBehavior = useCallback((signIds, at = Date.now()) => {
     const ids = Array.isArray(signIds) ? signIds.filter(Boolean) : [];
@@ -445,7 +498,10 @@ export function AppProvider({ children, uid }) {
       crashKit, updateCrashKit, flushCrashSync,
       crashDoses, addCrashDose, updateCrashDose, deleteCrashDose, logCrashDose, skipCrashDose, unlogCrashDose,
       crashMeds, addCrashMed, updateCrashMed, deleteCrashMed, refillCrashMed,
-      crashBehaviors, addCrashBehavior, deleteCrashBehavior,
+      crashBehaviors, addCrashBehavior, deleteCrashBehavior, checkInCrash,
+      rxRoutineRuns, checkRoutineStep,
+      rxWater, addWater, undoWater,
+      rxClientSent, markClientSent,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}

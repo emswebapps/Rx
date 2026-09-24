@@ -24,7 +24,10 @@ messaging.onBackgroundMessage((payload) => {
   // field, because FCM's webpush block does not pass `actions` through on every
   // platform. Rebuilding them here means the buttons show wherever they can.
   let actions = [];
-  try { actions = payload.data?.action ? DOSE_ACTIONS : []; } catch { actions = []; }
+  try {
+    const info = payload.data?.action ? JSON.parse(payload.data.action) : null;
+    actions = !info ? [] : info.kind === 'water' ? WATER_ACTIONS : DOSE_ACTIONS;
+  } catch { actions = []; }
 
   self.registration.showNotification(title, {
     body,
@@ -43,7 +46,19 @@ const DOSE_ACTIONS = [
   { action: 'skip', title: 'Skip' },
 ];
 
+const WATER_ACTIONS = [{ action: 'drank', title: 'Drank one' }];
+
 const SNOOZE_MS = 15 * 60 * 1000;
+
+/** Log a glass of water straight from the lock screen. */
+async function logWaterFromNotification() {
+  const uid = await currentUid();
+  if (!uid) throw new Error('not signed in');
+  const ref = firebase.firestore().doc(`users/${uid}/data/app`);
+  const snap = await ref.get();
+  const existing = snap.exists ? (snap.data().rxWater || []) : [];
+  await ref.set({ rxWater: [Date.now(), ...existing] }, { merge: true });
+}
 
 /**
  * Log a dose straight from the lock screen.
@@ -153,6 +168,11 @@ self.addEventListener('notificationclick', (event) => {
         data,
       });
     })());
+    return;
+  }
+
+  if (event.action === 'drank') {
+    event.waitUntil(logWaterFromNotification().catch(() => openApp(target)));
     return;
   }
 

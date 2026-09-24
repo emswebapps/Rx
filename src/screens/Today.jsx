@@ -10,11 +10,17 @@ import {
   expectedDosesOnDay, supplyStatus, activeMeds, startOfDay, sameLocalDay as sameDay,
 } from '../lib/meds.js';
 import { adherenceDays, adherenceSentence } from '../lib/adherence.js';
+import { routinesForDay, formatCountdown } from '../lib/routine.js';
+import { complianceDays, complianceSummary } from '../lib/compliance.js';
 import { formatClock } from '../lib/time.js';
 import ScheduleRow, { DoseSheet, TimeEditor } from '../components/ScheduleRow.jsx';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
+import { formatRunOut } from '../components/medsUi.jsx';
+import RoutineCard from '../components/RoutineCard.jsx';
+import WaterRow from '../components/WaterRow.jsx';
+import ComplianceCard from '../components/ComplianceRing.jsx';
 
 const DAY_LETTERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -40,12 +46,14 @@ export default function RxHome() {
   const {
     crashMeds, crashDoses, crashKit, crashSessions,
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
+    crashBehaviors, checkInCrash,
+    rxRoutineRuns, checkRoutineStep, rxWater, addWater, undoWater,
   } = useApp();
   const navigate = useNavigate();
 
   // Keyed on the doses themselves so logging or editing one updates the clock
   // straight away rather than at the next minute boundary.
-  const syncKey = `${crashMeds.length}:${crashDoses.length}:${
+  const syncKey = `${crashMeds.length}:${rxRoutineRuns.length}:${JSON.stringify(rxRoutineRuns[0]?.done || {})}:${crashDoses.length}:${
     crashDoses.length ? Math.max(...crashDoses.map((d) => d.takenAt)) : 0}`;
   const now = useNow({ tick: 60_000, syncKey });
 
@@ -64,6 +72,7 @@ export default function RxHome() {
 
   const schedule = expectedDosesOnDay(crashMeds, crashDoses, day, now);
   const groups = groupByTime(schedule);
+  const routines = new Map(routinesForDay(schedule, rxRoutineRuns, day, now).map((r) => [r.key, r]));
   const tracking = kit.doseTracking !== false;
 
   // The heading picked out in the accent: the first time still waiting on
@@ -74,10 +83,21 @@ export default function RxHome() {
     : null;
 
   const needsAttention = activeMeds(crashMeds)
-    .map((m) => ({ med: m, supply: supplyStatus(m, now) }))
-    .filter(({ supply }) => supply.low || supply.refillOpen);
+    .map((m) => ({ med: m, supply: supplyStatus(m, now, crashDoses) }))
+    .filter(({ supply }) => supply.low || supply.refillOpen || supply.shortBeforeRefill);
+  const short = needsAttention.filter(({ supply }) => supply.shortBeforeRefill);
 
   const adherence = adherenceSentence(adherenceDays(crashMeds, crashDoses, { now }));
+
+  // Seven days is enough for today's number and the week beside it; History
+  // computes the full thirty.
+  const complianceData = {
+    meds: crashMeds, doses: crashDoses, kit, sessions: crashSessions,
+    behaviors: crashBehaviors, runs: rxRoutineRuns, water: rxWater,
+  };
+  const recentCompliance = isToday ? complianceDays(complianceData, { days: 7, now }) : [];
+  const todayCompliance = recentCompliance[recentCompliance.length - 1] || null;
+  const complianceWeek = complianceSummary(recentCompliance);
 
   // A dose logged on a past day is recorded at the time it was due, so it lands
   // on that day and in that slot. Today's is recorded as now, as it always was.
@@ -136,6 +156,34 @@ export default function RxHome() {
           </button>
         )}
 
+        {/* ── Running out before the refill ──
+            Above the doses, because it's the one supply problem with a
+            deadline: the fix is a phone call that has to happen before the
+            bottle is empty, not after. */}
+        {isToday && tracking && short.map(({ med, supply }) => (
+          <button
+            key={med.id}
+            onClick={() => navigate('/supply')}
+            style={{
+              width: '100%', marginTop: '1.25rem', padding: '0.875rem 1rem', textAlign: 'left',
+              borderRadius: '1rem', cursor: 'pointer',
+              backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger)',
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+            }}
+          >
+            <Package size={20} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--danger)' }}>
+                {med.name || 'A medication'} runs out {supply.coverDays === 0 ? 'today'
+                  : supply.coverDays === 1 ? 'tomorrow' : formatRunOut(supply.runOutAt)}
+              </span>
+              <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text)', marginTop: '0.125rem' }}>
+                Refill opens {formatRunOut(supply.refillAt)} — {supply.gapDays} {supply.gapDays === 1 ? 'day' : 'days'} short
+              </span>
+            </span>
+          </button>
+        ))}
+
         {/* ── The doses, by the time they're due ── */}
         {tracking && (groups.length > 0 ? (
           groups.map((g) => (
@@ -148,9 +196,23 @@ export default function RxHome() {
                 {g.label}
               </h2>
               <div style={{ display: 'grid', gap: '0.75rem' }}>
-                {g.entries.map((entry) => (
-                  <ScheduleRow key={entry.key} entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
-                ))}
+                {g.entries.map((entry) => {
+                  const routine = routines.get(entry.key);
+                  return (
+                    <div key={entry.key} style={{ display: 'grid', gap: '0.5rem' }}>
+                      {routine && (
+                        <RoutineCard
+                          routine={routine}
+                          when={when}
+                          onToggleStep={(stepId, at) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, at)}
+                          onTake={() => take(entry)}
+                          onOpenDose={() => setOpenKey(entry.key)}
+                        />
+                      )}
+                      <ScheduleRow entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
+                    </div>
+                  );
+                })}
               </div>
             </section>
           ))
@@ -176,12 +238,25 @@ export default function RxHome() {
                 morning — but above everything else, because until Rx is
                 installed its dose reminders cannot reach a lock screen at all
                 on iOS. */}
+            {tracking && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <WaterRow
+                  log={rxWater}
+                  doses={crashDoses}
+                  config={kit.water}
+                  now={now}
+                  onAdd={() => addWater()}
+                  onUndo={() => undoWater()}
+                />
+              </div>
+            )}
+
             <div style={{ marginTop: '1.5rem' }}>
               <InstallCard />
             </div>
 
             {/* ── Needs sorting ── */}
-            {needsAttention.length > 0 && (
+            {needsAttention.length > short.length && (
               <button
                 onClick={() => navigate('/supply')}
                 style={{
@@ -194,9 +269,9 @@ export default function RxHome() {
               >
                 <Package size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {needsAttention.length === 1
-                    ? `${needsAttention[0].med.name || 'One medication'} needs a refill`
-                    : `${needsAttention.length} need a refill`}
+                  {needsAttention.length - short.length === 1
+                    ? `${needsAttention.find(({ supply }) => !supply.shortBeforeRefill).med.name || 'One medication'} needs a refill`
+                    : `${needsAttention.length - short.length} need a refill`}
                 </span>
                 <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--warn)' }}>Supply</span>
               </button>
@@ -205,11 +280,24 @@ export default function RxHome() {
             {/* ── Tonight ── */}
             {tracking && (
               <div style={{ marginTop: '1.25rem' }}>
-                <WindowTimeline meds={crashMeds} doses={crashDoses} kit={kit} now={now} />
+                <WindowTimeline
+                  meds={crashMeds}
+                  doses={crashDoses}
+                  kit={kit}
+                  now={now}
+                  behaviors={crashBehaviors}
+                  sessions={crashSessions}
+                  onCheckIn={() => checkInCrash()}
+                />
               </div>
             )}
 
             {/* ── How it's been going ── */}
+            {tracking && todayCompliance && todayCompliance.score != null && (
+              <div style={{ marginTop: '1rem' }}>
+                <ComplianceCard day={todayCompliance} summary={complianceWeek} onOpen={() => navigate('/history?tab=score')} />
+              </div>
+            )}
             {adherence && (
               <button
                 onClick={() => navigate('/history')}
@@ -240,6 +328,7 @@ export default function RxHome() {
         <DoseSheet
           entry={openEntry}
           when={when}
+          routineNote={routineNote(routines.get(openEntry.key), Date.now())}
           onClose={() => setOpenKey(null)}
           onTake={take}
           onSkip={skip}
@@ -258,6 +347,24 @@ export default function RxHome() {
       )}
     </div>
   );
+}
+
+/**
+ * What the dose sheet should say about the routine in front of it, if taking
+ * the dose now would jump it. Said once, plainly, and then it gets out of the
+ * way — it's your medication.
+ */
+function routineNote(routine, now) {
+  if (!routine) return null;
+  const dose = routine.steps.find((s) => s.kind === 'dose');
+  if (!dose || dose.state === 'done' || dose.state === 'skipped' || dose.state === 'active') return null;
+  if (routine.waitingUntil) {
+    return `Your wait has ${formatCountdown(routine.waitingUntil - now)} left. Taking it now counts the routine as not followed.`;
+  }
+  const next = routine.steps.find((s) => s.state === 'active');
+  return next && next.kind === 'task'
+    ? `“${next.text}” isn’t checked off yet.`
+    : null;
 }
 
 function daysBetween(fromDay, toDay) {

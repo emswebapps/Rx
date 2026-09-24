@@ -403,11 +403,34 @@ test('no medication notification ever names the medication', () => {
   const secrets = [
     'Adderall XR', 'Adderall IR', '20 mg', '10 mg',
     'Eat first — nothing too high in fat', 'Walgreens on Fifth',
+    'Three scrambled eggs',
   ];
+  // The morning routine and water, so their reminders are in the sweep too.
+  const XR_ROUTINE = {
+    ...XR,
+    schedule: {
+      times: [{
+        id: 't1', mode: 'clock', time: '08:00',
+        routine: [
+          { id: 'eat', kind: 'task', text: 'Three scrambled eggs' },
+          { id: 'w', kind: 'wait', minutes: 30 },
+          { id: 'd', kind: 'dose' },
+        ],
+      }],
+    },
+  };
+  const routineAndWater = {
+    crashKit: {
+      onsetHours: 4, durationHours: 5, doseTracking: true,
+      water: { enabled: true, everyMinutes: 60, goal: 8, until: '20:00' },
+    },
+    rxRoutineRuns: [{ id: '2026-07-26|xr|t1', day: '2026-07-26', done: { eat: localAt(7, 10) } }],
+  };
   const lowSupply = {
     crashMeds: [
-      { ...XR, supply: { onHand: 1, perDose: 1, lowDays: 7, refillFrom: '2026-07-26' }, note: 'Walgreens on Fifth' },
-      IR,
+      { ...XR_ROUTINE, supply: { onHand: 1, perDose: 1, lowDays: 7, refillFrom: '2026-07-26' }, note: 'Walgreens on Fifth' },
+      // Two left and the fill date is days away: runs out before the refill.
+      { ...IR, supply: { onHand: 2, perDose: 1, lowDays: 1, refillFrom: '2026-07-31' } },
     ],
     crashDrafts: [{ id: 'x1', text: 'the giant text I nearly sent', status: 'held', releaseAt: NOW - HOUR }],
   };
@@ -420,10 +443,10 @@ test('no medication notification ever names the medication', () => {
   // Every optional nudge is switched ON here, whatever its default. A message
   // kind that is off by default is exactly the one that would otherwise slip
   // past this sweep and ship unread.
-  const everything = { crash: { ...ALL_ON, doseLate: true } };
+  const everything = { crash: { ...ALL_ON, doseLate: true, routineWait: true, water: true } };
   const days = [
-    withRegimen({ ...lowSupply, crashDoses: [], notifPrefs: everything }),
-    withRegimen({ ...lowSupply, notifPrefs: everything }),
+    withRegimen({ ...lowSupply, ...routineAndWater, crashDoses: [], notifPrefs: everything }),
+    withRegimen({ ...lowSupply, ...routineAndWater, notifPrefs: everything }),
   ];
 
   // Sweep both, at every quarter hour, rather than trusting a single instant.
@@ -432,7 +455,9 @@ test('no medication notification ever names the medication', () => {
     for (let h = 0; h < 24; h += 1) {
       for (const m of [0, 15, 30, 45]) {
         for (const msg of collectCrashMessages(data, {}, localAt(h, m), TZ)) {
-          seen.add(msg.tag.replace(/-\d{4}-\d{2}-\d{2}$/, ''));
+          seen.add(msg.tag.startsWith('rx-water-') ? 'rx-water'
+            : msg.tag.startsWith('crash-short-') ? msg.tag.replace(/-ir-.*$/, '-ir')
+              : msg.tag.replace(/-\d{4}-\d{2}-\d{2}$/, ''));
           const blob = `${msg.title} ${msg.body}`;
           for (const secret of secrets) {
             assert.ok(!blob.includes(secret), `${msg.tag} leaked ${JSON.stringify(secret)}`);
@@ -447,6 +472,120 @@ test('no medication notification ever names the medication', () => {
   assert.deepStrictEqual([...seen].sort(), [
     'crash-dose-ir-t1', 'crash-dose-xr-t1', 'crash-escrow', 'crash-late-ir-t1',
     'crash-late-xr-t1', 'crash-note', 'crash-refill-xr', 'crash-rule-xr-eat',
-    'crash-window-d-xr',
+    'crash-window-d-xr', 'rx-wait-2026-07-26_xr_t1-w', 'rx-water',
+    'crash-short-ir', 'crash-short-soon-ir',
   ].sort());
+});
+
+// ── The routine's waits, and water ──────────────────────────────────────────
+
+const ROUTINE_XR = {
+  ...XR,
+  schedule: {
+    times: [{
+      id: 't1', mode: 'clock', time: '08:00',
+      routine: [
+        { id: 'eat', kind: 'task', text: 'Eat' },
+        { id: 'w', kind: 'wait', minutes: 30 },
+        { id: 'd', kind: 'dose' },
+      ],
+    }],
+  },
+};
+const WAIT_TAG = 'rx-wait-2026-07-26_xr_t1-w';
+const ateAt = (h, m) => [{ id: '2026-07-26|xr|t1', day: '2026-07-26', done: { eat: localAt(h, m) } }];
+const onlyNew = (msgs) => tags(msgs).filter((t) => t.startsWith('rx-'));
+
+test('a routine wait buzzes when it runs out, counted from when the step before it was checked', () => {
+  const data = withRegimen({ crashMeds: [ROUTINE_XR], crashDoses: [], rxRoutineRuns: ateAt(7, 10) });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 35), TZ)), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 40), TZ)), [WAIT_TAG]);
+  const msg = collectCrashMessages(data, {}, localAt(7, 40), TZ).find((m) => m.tag === WAIT_TAG);
+  assert.strictEqual(msg.title, 'Your wait is up');
+  // Not again once sent, and not an hour later.
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, { [WAIT_TAG]: 1 }, localAt(7, 45), TZ)), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(8, 45), TZ)), []);
+});
+
+test('a wait the app already announced is not sent again', () => {
+  const data = withRegimen({
+    crashMeds: [ROUTINE_XR], crashDoses: [], rxRoutineRuns: ateAt(7, 10),
+    rxClientSent: { [WAIT_TAG]: localAt(7, 40) },
+  });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 42), TZ)), []);
+});
+
+test('a wait cut short by taking the dose says nothing', () => {
+  const data = withRegimen({
+    crashMeds: [ROUTINE_XR], rxRoutineRuns: ateAt(7, 10),
+    crashDoses: [{ id: 'd', takenAt: localAt(7, 30), medId: 'xr', slotId: 't1', status: 'taken' }],
+  });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 40), TZ)), []);
+});
+
+test('water is due an interval after the first dose, with a button to log it', () => {
+  const data = withRegimen({
+    crashKit: { doseTracking: true, water: { enabled: true, everyMinutes: 60, goal: 8, until: '20:00' } },
+  });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(8, 55), TZ)), []);
+  const msgs = collectCrashMessages(data, {}, localAt(9, 0), TZ).filter((m) => m.tag.startsWith('rx-water'));
+  assert.deepStrictEqual(tags(msgs), ['rx-water-2026-07-26-0-0']);
+  assert.deepStrictEqual(msgs[0].action, { kind: 'water' });
+  assert.deepStrictEqual(msgs[0].actions, [{ action: 'drank', title: 'Drank one' }]);
+  // Logging a glass moves the next one along.
+  const drank = { ...data, rxWater: [localAt(9, 5)] };
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(drank, {}, localAt(9, 30), TZ)), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(drank, {}, localAt(10, 5), TZ)), ['rx-water-2026-07-26-1-0']);
+});
+
+test('water stays quiet when it is off, switched off, or before any dose', () => {
+  const on = { doseTracking: true, water: { enabled: true, everyMinutes: 60, goal: 8, until: '20:00' } };
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(withRegimen(), {}, localAt(10), TZ)), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(
+    withRegimen({ crashKit: on, notifPrefs: { crash: { ...ALL_ON, water: false } } }), {}, localAt(10), TZ,
+  )), []);
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(
+    withRegimen({ crashKit: on, crashDoses: [] }), {}, localAt(10), TZ,
+  )), []);
+});
+
+test('the routine wait can be switched off on its own', () => {
+  const data = withRegimen({
+    crashMeds: [ROUTINE_XR], crashDoses: [], rxRoutineRuns: ateAt(7, 10),
+    notifPrefs: { crash: { ...ALL_ON, routineWait: false } },
+  });
+  assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 40), TZ)), []);
+});
+
+// ── Running out before the refill date ──────────────────────────────────────
+
+const SHORT = (onHand, refillFrom) => withRegimen({
+  crashMeds: [{ ...XR, supply: { onHand, perDose: 1, lowDays: 1, refillFrom } }],
+  crashDoses: [],
+});
+const shortTags = (msgs) => tags(msgs).filter((t) => t.startsWith('crash-short'));
+
+test('says so as soon as the pills in hand won’t reach the refill date', () => {
+  // 10 left, one a day from today: out on Aug 5. Refill Aug 10.
+  const msgs = collectCrashMessages(SHORT(10, '2026-08-10'), {}, localAt(7), TZ);
+  assert.deepStrictEqual(shortTags(msgs), ['crash-short-xr-2026-08-10-2026-08-05']);
+  const m = msgs.find((x) => x.tag.startsWith('crash-short'));
+  assert.strictEqual(m.url, `${RX_APP_URL}supply`);
+  // Once, not every tick.
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(10, '2026-08-10'), { [m.tag]: 1 }, localAt(8), TZ)), []);
+});
+
+test('and again three days out if it still is', () => {
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(3, '2026-08-10'), {}, localAt(7), TZ)), [
+    'crash-short-xr-2026-08-10-2026-07-29', 'crash-short-soon-xr-2026-08-10-2026-07-29',
+  ]);
+});
+
+test('quiet when the supply reaches the refill date, or the pref is off', () => {
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(30, '2026-08-10'), {}, localAt(7), TZ)), []);
+  const off = withRegimen({
+    crashMeds: [{ ...XR, supply: { onHand: 3, perDose: 1, lowDays: 1, refillFrom: '2026-08-10' } }],
+    crashDoses: [], notifPrefs: { crash: { ...ALL_ON, supplyGap: false } },
+  });
+  assert.deepStrictEqual(shortTags(collectCrashMessages(off, {}, localAt(7), TZ)), []);
 });

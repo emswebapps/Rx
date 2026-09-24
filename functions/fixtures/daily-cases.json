@@ -1,0 +1,1623 @@
+{
+  "tz": "America/New_York",
+  "scenarios": [
+    {
+      "name": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "meds": [
+        {
+          "id": "ir",
+          "name": "Booster",
+          "kind": "booster",
+          "graceMinutes": 45,
+          "onsetHours": 3,
+          "durationHours": 3,
+          "schedule": {
+            "times": [
+              {
+                "id": "t1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1,
+                "routine": [
+                  {
+                    "id": "eat",
+                    "kind": "task",
+                    "text": "Eat"
+                  },
+                  {
+                    "id": "w1",
+                    "kind": "wait",
+                    "minutes": 30
+                  },
+                  {
+                    "id": "take",
+                    "kind": "dose"
+                  },
+                  {
+                    "id": "w2",
+                    "kind": "wait",
+                    "minutes": 20
+                  },
+                  {
+                    "id": "water",
+                    "kind": "task",
+                    "text": "Full glass"
+                  }
+                ]
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "medId": "ir",
+          "slotId": "t1",
+          "takenAt": 1790250120000,
+          "status": "taken"
+        }
+      ],
+      "runs": [
+        {
+          "id": "2026-09-24|ir|t1",
+          "day": "2026-09-24",
+          "medId": "ir",
+          "slotId": "t1",
+          "done": {
+            "eat": 1790248200000
+          }
+        }
+      ],
+      "water": [
+        1790254800000
+      ],
+      "kit": {
+        "water": {
+          "enabled": true,
+          "everyMinutes": 45,
+          "goal": 3,
+          "until": "11:00"
+        }
+      }
+    },
+    {
+      "name": "ate at 7:10, nothing taken yet",
+      "meds": [
+        {
+          "id": "ir",
+          "name": "Booster",
+          "kind": "booster",
+          "graceMinutes": 45,
+          "onsetHours": 3,
+          "durationHours": 3,
+          "schedule": {
+            "times": [
+              {
+                "id": "t1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1,
+                "routine": [
+                  {
+                    "id": "eat",
+                    "kind": "task",
+                    "text": "Eat"
+                  },
+                  {
+                    "id": "w1",
+                    "kind": "wait",
+                    "minutes": 30
+                  },
+                  {
+                    "id": "take",
+                    "kind": "dose"
+                  },
+                  {
+                    "id": "w2",
+                    "kind": "wait",
+                    "minutes": 20
+                  },
+                  {
+                    "id": "water",
+                    "kind": "task",
+                    "text": "Full glass"
+                  }
+                ]
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "active": true
+        }
+      ],
+      "doses": [],
+      "runs": [
+        {
+          "id": "2026-09-24|ir|t1",
+          "day": "2026-09-24",
+          "medId": "ir",
+          "slotId": "t1",
+          "done": {
+            "eat": 1790248200000
+          }
+        }
+      ],
+      "water": [],
+      "kit": {
+        "water": {
+          "enabled": true,
+          "everyMinutes": 45,
+          "goal": 3,
+          "until": "11:00"
+        }
+      }
+    },
+    {
+      "name": "took it before the wait was up",
+      "meds": [
+        {
+          "id": "ir",
+          "name": "Booster",
+          "kind": "booster",
+          "graceMinutes": 45,
+          "onsetHours": 3,
+          "durationHours": 3,
+          "schedule": {
+            "times": [
+              {
+                "id": "t1",
+                "mode": "clock",
+                "time": "08:00",
+                "amount": 1,
+                "routine": [
+                  {
+                    "id": "eat",
+                    "kind": "task",
+                    "text": "Eat"
+                  },
+                  {
+                    "id": "w1",
+                    "kind": "wait",
+                    "minutes": 30
+                  },
+                  {
+                    "id": "take",
+                    "kind": "dose"
+                  },
+                  {
+                    "id": "w2",
+                    "kind": "wait",
+                    "minutes": 20
+                  },
+                  {
+                    "id": "water",
+                    "kind": "task",
+                    "text": "Full glass"
+                  }
+                ]
+              }
+            ],
+            "days": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "active": true
+        }
+      ],
+      "doses": [
+        {
+          "id": "d1",
+          "medId": "ir",
+          "slotId": "t1",
+          "takenAt": 1790248800000,
+          "status": "taken"
+        }
+      ],
+      "runs": [
+        {
+          "id": "2026-09-24|ir|t1",
+          "day": "2026-09-24",
+          "medId": "ir",
+          "slotId": "t1",
+          "done": {
+            "eat": 1790248200000
+          }
+        }
+      ],
+      "water": [
+        1790251200000,
+        1790253000000,
+        1790254800000
+      ],
+      "kit": {
+        "water": {
+          "enabled": true,
+          "everyMinutes": 45,
+          "goal": 3,
+          "until": "11:00"
+        }
+      }
+    }
+  ],
+  "cases": [
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790244000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790244300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790244600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790244900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790245200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790245500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790245800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790246100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790246400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790246700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790247000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790247300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790247600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790247900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790248200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790248500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790248800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790249100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790249400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790249700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790250000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790250300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790250600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790250900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790251200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790251500000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790251800000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790252100000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790252400000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790252700000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790253000000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790253300000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790253600000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790253900000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790254200000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790254500000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-0-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790254800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790255100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790255400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790255700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790256000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790256300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790256600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790256900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790257200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790257500000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790257800000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790258100000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790258400000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790258700000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790259000000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790259300000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790259600000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790259900000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-0"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790260200000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790260500000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790260800000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790261100000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790261400000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790261700000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790262000000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790262300000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790262600000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-1"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790262900000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790263200000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790263500000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790263800000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790264100000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790264400000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790264700000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790265000000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790265300000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-2"
+    },
+    {
+      "scenario": "ate at 7:10, took it on time after the wait, glass at 9:00",
+      "now": 1790265600000,
+      "waits": [],
+      "water": "rx-water-2026-09-24-1-3"
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790244000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790244300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790244600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790244900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790245200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790245500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790245800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790246100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790246400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790246700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790247000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790247300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790247600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790247900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790248200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790248500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790248800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790249100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790249400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790249700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790250000000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790250300000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790250600000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790250900000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790251200000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790251500000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790251800000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w1"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790252100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790252400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790252700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790253000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790253300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790253600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790253900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790254200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790254500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790254800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790255100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790255400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790255700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790256000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790256300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790256600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790256900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790257200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790257500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790257800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790258100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790258400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790258700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790259000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790259300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790259600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790259900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790260200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790260500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790260800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790261100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790261400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790261700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790262000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790262300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790262600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790262900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790263200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790263500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790263800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790264100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790264400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790264700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790265000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790265300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "ate at 7:10, nothing taken yet",
+      "now": 1790265600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790244000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790244300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790244600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790244900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790245200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790245500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790245800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790246100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790246400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790246700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790247000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790247300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790247600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790247900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790248200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790248500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790248800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790249100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790249400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790249700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790250000000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790250300000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790250600000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790250900000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790251200000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790251500000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790251800000,
+      "waits": [
+        "rx-wait-2026-09-24_ir_t1-w2"
+      ],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790252100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790252400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790252700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790253000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790253300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790253600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790253900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790254200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790254500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790254800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790255100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790255400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790255700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790256000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790256300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790256600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790256900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790257200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790257500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790257800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790258100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790258400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790258700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790259000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790259300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790259600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790259900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790260200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790260500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790260800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790261100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790261400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790261700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790262000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790262300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790262600000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790262900000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790263200000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790263500000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790263800000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790264100000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790264400000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790264700000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790265000000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790265300000,
+      "waits": [],
+      "water": null
+    },
+    {
+      "scenario": "took it before the wait was up",
+      "now": 1790265600000,
+      "waits": [],
+      "water": null
+    }
+  ]
+}

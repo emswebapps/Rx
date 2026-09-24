@@ -466,7 +466,7 @@ export function nextScheduledDay(med, dayTs) {
 // ── The window ──────────────────────────────────────────────────────────────
 
 /** The span a single logged dose is responsible for. */
-function spanFor(dose, med, kit) {
+export function spanFor(dose, med, kit) {
   const onset = positive(med?.onsetHours, positive(kit.onsetHours, DEFAULT_ONSET_HOURS));
   const duration = positive(med?.durationHours, positive(kit.durationHours, DEFAULT_DURATION_HOURS));
   const start = dose.takenAt + onset * HOUR_MS;
@@ -615,7 +615,7 @@ export function formatOffset(minutes) {
  * are the same number. `refillFrom` is the date the fill window opens — for a
  * controlled substance that date is the constraint, not the pill count.
  */
-export function supplyStatus(med, now = Date.now()) {
+export function supplyStatus(med, now = Date.now(), doses = null) {
   const m = normalizeMed(med);
   const s = m.supply || {};
   const onHand = countOrNull(s.onHand);
@@ -638,6 +638,7 @@ export function supplyStatus(med, now = Date.now()) {
     return {
       tracked: false, onHand: null, perDay, form: m.form, dosesLeft: null, daysLeft: null,
       low: false, lowDays, refillFrom: s.refillFrom || '', refillAt, refillOpen, daysUntilRefill,
+      runOutAt: null, coverDays: null, gapDays: 0, shortBeforeRefill: false,
     };
   }
 
@@ -646,12 +647,70 @@ export function supplyStatus(med, now = Date.now()) {
   const smallest = Math.min(...m.schedule.times.map((t) => positive(t.amount, 1)));
   const dosesLeft = Math.floor(onHand / smallest);
   const daysLeft = perDay > 0 ? Math.floor(onHand / perDay) : null;
+  const gap = runOut(m, onHand, now, doses, refillAt);
 
   return {
     tracked: true, onHand, perDay, form: m.form, dosesLeft, daysLeft,
     low: daysLeft != null && daysLeft <= lowDays, lowDays,
     refillFrom: s.refillFrom || '', refillAt, refillOpen, daysUntilRefill,
+    ...gap,
   };
+}
+
+/** The local midnight `n` days after the one containing `ts`, safe across a clock change. */
+function addDays(ts, n) {
+  const d = new Date(startOfDay(ts));
+  d.setDate(d.getDate() + n);
+  return d.getTime();
+}
+
+// Far enough to cover any real bottle; past this it "doesn't run out".
+const RUN_OUT_HORIZON_DAYS = 400;
+
+/**
+ * The day the pills in hand stop covering the schedule, walked dose by dose
+ * rather than averaged.
+ *
+ * The average in `daysLeft` is fine for a bar, but "will I make it to the
+ * refill date?" is a yes-or-no question about a specific day, and the answer
+ * turns on details an average smears: days off, a two-tablet afternoon, and
+ * whether this morning's dose has already come out of the count. So this
+ * counts forward from today, skipping days it isn't taken and today's doses
+ * already logged (taken or skipped — `onHand` already reflects them), and
+ * stops at the first dose the count can't cover.
+ *
+ * `runOutAt` is the local midnight of that day — the first day you'd be short.
+ * `coverDays` is how many days away it is (0 = today). When the refill date
+ * is later than that, `shortBeforeRefill` is set and `gapDays` counts the
+ * scheduled days in between with nothing to take.
+ */
+function runOut(m, onHand, now, doses, refillAt) {
+  const today = startOfDay(now);
+  const loggedToday = Array.isArray(doses) ? entriesForMedOnDay(m.id, doses, now).length : 0;
+  let remaining = onHand;
+  let runOutAt = null;
+
+  for (let i = 0; i < RUN_OUT_HORIZON_DAYS && runOutAt == null; i += 1) {
+    const day = addDays(today, i);
+    if (!scheduledOnDay(m, day)) continue;
+    const slots = i === 0 ? m.schedule.times.slice(loggedToday) : m.schedule.times;
+    for (const t of slots) {
+      const amount = positive(t.amount, 1);
+      if (remaining < amount) { runOutAt = day; break; }
+      remaining -= amount;
+    }
+  }
+
+  if (runOutAt == null) return { runOutAt: null, coverDays: null, gapDays: 0, shortBeforeRefill: false };
+
+  const coverDays = Math.round((runOutAt - today) / (24 * HOUR_MS));
+  let gapDays = 0;
+  if (refillAt != null && runOutAt < refillAt) {
+    for (let d = runOutAt; d < refillAt; d = addDays(d, 1)) {
+      if (scheduledOnDay(m, d)) gapDays += 1;
+    }
+  }
+  return { runOutAt, coverDays, gapDays, shortBeforeRefill: gapDays > 0 };
 }
 
 /** "2026-09-04" as a local midnight, rather than the UTC one `new Date()` gives. */

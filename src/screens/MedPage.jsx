@@ -6,9 +6,11 @@ import {
   normalizeMed, supplyStatus, formatOffset, MED_KINDS, newMed, withDoseCount,
   DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount,
 } from '../lib/meds.js';
-import { headingStyle, Segmented, SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
+import { headingStyle, Segmented, SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
+import { formatHours } from '../lib/window.js';
+import RoutineEditor from '../components/RoutineEditor.jsx';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
 
@@ -247,7 +249,7 @@ function EditMed({ id }) {
 // ── The form itself ─────────────────────────────────────────────────────────
 
 function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenNotes, banner }) {
-  const { crashMeds } = useApp();
+  const { crashMeds, crashDoses } = useApp();
   const [advanced, setAdvanced] = useState(false);
 
   const setSchedule = (patch) => set({ schedule: { ...med.schedule, ...patch } });
@@ -266,7 +268,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
   // A med can hang off any other med, but never off itself — that's a chain
   // with no beginning, and the resolver would just give up and say "unknown".
   const anchors = crashMeds.filter((m) => m.id !== med.id && m.active !== false);
-  const status = supplyStatus(med, Date.now());
+  const status = supplyStatus(med, Date.now(), crashDoses);
 
   const addRule = () => set({
     rules: [...(med.rules || []), { id: `r-${Date.now()}`, text: '', offsetMinutes: -60 }],
@@ -423,6 +425,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
         </div>
 
         <SupplyBar status={status} />
+        <RunOutLine status={status} />
 
         {refill && (
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem' }}>
@@ -562,6 +565,22 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
               <strong style={{ color: 'var(--text)' }}> History </strong>
               will tell you what they actually are.
             </p>
+            <Segmented
+              options={[
+                { key: 'manual', label: 'My number' },
+                { key: 'learned', label: 'Learn it from my crashes' },
+              ]}
+              value={med.onsetSource === 'learned' ? 'learned' : 'manual'}
+              onChange={(onsetSource) => set({ onsetSource })}
+              style={{ marginBottom: '0.75rem' }}
+            />
+            {med.onsetSource === 'learned' && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+                {med.learnedSamples
+                  ? `Set from ${med.learnedSamples} crashes that followed this one: about ${formatHours(med.onsetHours)} after you take it. It keeps updating as you log more.`
+                  : 'Uses your number below until five crash sessions have followed this medication, then sets it from when they actually started.'}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <div style={{ flex: 1 }}>
                 <label className="app-label">Hours until it wears off</label>
@@ -569,6 +588,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
                   type="number" min="0.5" step="0.5"
                   value={med.onsetHours}
                   onChange={(e) => set({ onsetHours: Number(e.target.value) })}
+                  disabled={med.onsetSource === 'learned' && Boolean(med.learnedSamples)}
                   className="app-input" style={{ width: '100%' }}
                 />
               </div>
@@ -694,6 +714,16 @@ function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) 
           {formatAmount(time.amount, form).replace(/^[\d.]+\s/, '')}
         </span>
       </div>
+
+      <RoutineEditor
+        routine={time.routine}
+        // Stamped when first set up, so the days before don't count as a
+        // routine not followed.
+        onChange={(routine) => onChange({
+          routine,
+          routineSince: routine.length ? (time.routineSince || Date.now()) : null,
+        })}
+      />
     </div>
   );
 }

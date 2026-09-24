@@ -55,12 +55,13 @@ const serializeWindow = (w) => (w == null ? null : {
 const serializeRules = (list) =>
   list.map((r) => ({ medId: r.medId, ruleId: r.ruleId, at: r.at }));
 
-const serializeSupply = (meds, now) =>
+const serializeSupply = (meds, now, doses) =>
   meds.map((m) => {
-    const s = supplyStatus(m, now);
+    const s = supplyStatus(m, now, doses);
     return {
       medId: m.id, tracked: s.tracked, dosesLeft: s.dosesLeft, daysLeft: s.daysLeft,
       perDay: s.perDay, low: s.low, refillOpen: s.refillOpen, daysUntilRefill: s.daysUntilRefill,
+      runOutAt: s.runOutAt, coverDays: s.coverDays, gapDays: s.gapDays, shortBeforeRefill: s.shortBeforeRefill,
     };
   });
 
@@ -82,7 +83,7 @@ for (const c of fixture.cases) {
       'dueRules',
     );
     assert.deepStrictEqual(
-      serializeSupply(c.meds, c.now),
+      serializeSupply(c.meds, c.now, c.doses),
       c.expect.supply,
       'supplyStatus',
     );

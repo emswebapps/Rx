@@ -121,7 +121,7 @@ export default function ScheduleRow({ entry, onOpen, now = Date.now() }) {
  * `when` says which day the sheet is for. A day still to come can't be logged —
  * there is nothing to record yet — so it offers only the medication itself.
  */
-export function DoseSheet({ entry, when, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed }) {
+export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed }) {
   const { med, state, expectedAt, amount, dose, entry: logged } = entry;
   const rules = rulesForMed(med);
   const status = statusText(entry);
@@ -163,6 +163,18 @@ export function DoseSheet({ entry, when, onClose, onTake, onSkip, onUndo, onChan
             </p>
           ))}
         </div>
+      )}
+
+      {routineNote && !future && state !== 'taken' && (
+        <p style={{
+          display: 'flex', gap: '0.5rem', alignItems: 'flex-start',
+          fontSize: '0.875rem', lineHeight: 1.45, color: 'var(--warn)', fontWeight: 600,
+          padding: '0.75rem', marginTop: '0.75rem', borderRadius: '0.75rem',
+          border: '1px solid var(--warn)',
+        }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: '0.125rem' }} />
+          {routineNote}
+        </p>
       )}
 
       {future ? (

@@ -4,7 +4,7 @@ import { Package, AlertTriangle, CalendarClock, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNow } from '../lib/useCountdown.js';
 import { activeMeds, supplyStatus, formatAmount } from '../lib/meds.js';
-import { SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
+import { SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 
 /**
  * What's left, and when it can be filled.
@@ -18,8 +18,9 @@ import { SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
  * which is where it used to live.
  */
 
-/** Refill-open first, then low, then everything else. */
+/** Short before the refill first, then refill-open, then low, then the rest. */
 function urgency(status) {
+  if (status.shortBeforeRefill) return -1;
   if (status.refillOpen) return 0;
   if (status.low) return 1;
   if (!status.tracked) return 3;
@@ -34,7 +35,7 @@ export default function SupplyView({ onBack }) {
   const [count, setCount] = useState('');
 
   const rows = activeMeds(crashMeds)
-    .map((med) => ({ med, status: supplyStatus(med, now) }))
+    .map((med) => ({ med, status: supplyStatus(med, now, crashDoses) }))
     .sort((a, b) => urgency(a.status) - urgency(b.status)
       || (a.status.daysLeft ?? Infinity) - (b.status.daysLeft ?? Infinity));
 
@@ -69,7 +70,7 @@ export default function SupplyView({ onBack }) {
               className="app-card"
               style={{
                 padding: '1rem',
-                border: `1px solid ${status.refillOpen ? 'var(--accent)' : status.low ? 'var(--warn)' : 'var(--border)'}`,
+                border: `1px solid ${status.shortBeforeRefill ? 'var(--danger)' : status.refillOpen ? 'var(--accent)' : status.low ? 'var(--warn)' : 'var(--border)'}`,
               }}
             >
               <button
@@ -98,6 +99,7 @@ export default function SupplyView({ onBack }) {
               {status.tracked && (
                 <div style={{ marginTop: '0.75rem' }}>
                   <SupplyBar status={status} />
+                  <RunOutLine status={status} />
                 </div>
               )}
 
@@ -175,6 +177,8 @@ export default function SupplyView({ onBack }) {
       )}
 
       <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginTop: '1.5rem' }}>
+        “Runs out” counts forward one scheduled dose at a time from the pills
+        you have now, skipping days off and anything already logged today.
         Days left counts every scheduled dose and how many you take at each,
         scaled for the days you don’t take it — so a twice-daily weekday
         medication empties faster than a once-daily one. Logging a dose counts
