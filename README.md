@@ -187,6 +187,14 @@ Tapping the one being eaten checks the meal off, records the food, and starts
 the countdown, all in one write. The routine beside the dose is a single
 line, e.g. *✓ RXBAR → 14:59 → Take*. Tapping the food undoes it.
 
+### Setting up the IR routine
+
+Today offers, once, to set up an Adderall's routines (`src/lib/presets.js`):
+*dose 1: 1 egg → 15 min → take*, then *Ready Clean Bar → 15 min → take* for
+every later dose. It previews exactly what it will write and only applies on
+**Set up**. Doses that already have a routine are left alone, and both meals
+are added to My meals. **Not now** hides it on this device.
+
 ### My meals
 
 Settings → My meals (`/meals`) keeps two lists the user builds: meals that

@@ -16,6 +16,7 @@ import ScheduleRow, { DoseSheet, TimeEditor, MedNotesSheet } from '../components
 import { notesForMed } from '../lib/notes.js';
 import { checkInsDue } from '../lib/effects.js';
 import EffectCheckIn from '../components/EffectCheckIn.jsx';
+import { irPresetTarget, withIrRoutines, irPresetLines, IR_PLAN } from '../lib/presets.js';
 import NowCard from '../components/NowCard.jsx';
 import { groupSettled as dosesSettled, afterDoseOpen, formatUntil } from '../lib/next.js';
 import { effectiveWindow } from '../lib/meds.js';
@@ -55,7 +56,7 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
-    rxNotes, addRxNote, rxEffects, addEffect, rxMeals,
+    rxNotes, addRxNote, rxEffects, addEffect, rxMeals, saveRxMeal, updateCrashMed,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
@@ -183,6 +184,17 @@ export default function RxHome() {
           </button>
         )}
 
+        {/* ── One-time offer: set up the IR routines ── */}
+        {isToday && tracking && (
+          <IrPresetOffer
+            meds={crashMeds}
+            onApply={(med) => {
+              updateCrashMed(med.id, { schedule: withIrRoutines(med) });
+              saveRxMeal([{ name: IR_PLAN.first, status: 'ok' }, { name: IR_PLAN.later, status: 'ok' }]);
+            }}
+          />
+        )}
+
         {/* ── The one thing to look at now ── */}
         {isToday && tracking && groups.length > 0 && (
           <div style={{ marginTop: '0.75rem' }}>
@@ -286,9 +298,11 @@ export default function RxHome() {
                 display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'left',
               }}
             >
-              <Check size={16} style={{ color: 'var(--positive)', flexShrink: 0 }} />
+              {taken > 0
+                ? <Check size={16} style={{ color: 'var(--positive)', flexShrink: 0 }} />
+                : <X size={16} style={{ color: 'var(--danger)', flexShrink: 0 }} />}
               <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
-                {taken} of {entries.length} done earlier
+                {taken} of {entries.length} taken earlier
                 <span style={{ fontWeight: 400, color: 'var(--subtle)' }}>
                   {' · '}{entries.map((e) => (e.dose ? formatClock(e.dose.takenAt) : e.state === 'skipped' ? 'missed' : 'skipped')).join(', ')}
                 </span>
@@ -325,13 +339,7 @@ export default function RxHome() {
                           onOpenDose={() => setOpenKey(entry.key)}
                         />
                       )}
-                      <ScheduleRow
-                        entry={entry}
-                        now={now}
-                        onOpen={(e) => setOpenKey(e.key)}
-                        onNotes={(med) => setNotesFor(med.id)}
-                        noteCount={noteCount(entry.med)}
-                      />
+                      <ScheduleRow entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
                     </div>
                   );
                 })}
@@ -462,6 +470,8 @@ export default function RxHome() {
           onChangeTime={(dose) => { setOpenKey(null); setEditingDose(dose.id); }}
           onOpenMed={(medId) => navigate(`/meds/${medId}`)}
           onCheckIn={isToday ? (medId) => { setOpenKey(null); setManualCheckIn(medId); } : null}
+          onNotes={(med) => { setOpenKey(null); setNotesFor(med.id); }}
+          noteCount={noteCount(openEntry.med)}
         />
       )}
 
@@ -777,6 +787,51 @@ function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onT
       >
         {open ? 'Less' : 'More details'}
       </button>
+    </div>
+  );
+}
+
+const IR_OFFER_KEY = 'rx_ir_preset_dismissed';
+
+/**
+ * "Set up your Adderall routines?" — shown once, above everything, until it's
+ * applied or dismissed. Nothing changes until the tap: it's the user's
+ * schedule, and the preview says exactly what will be written.
+ */
+function IrPresetOffer({ meds, onApply }) {
+  const [hidden, setHidden] = useState(() => {
+    try { return Boolean(localStorage.getItem(IR_OFFER_KEY)); } catch { return false; }
+  });
+  const med = irPresetTarget(meds);
+  if (hidden || !med) return null;
+  const dismiss = () => {
+    try { localStorage.setItem(IR_OFFER_KEY, String(Date.now())); } catch { /* shown again next time */ }
+    setHidden(true);
+  };
+
+  return (
+    <div className="app-card" style={{ marginTop: '0.75rem', padding: '0.875rem 1rem', borderColor: 'var(--accent)' }}>
+      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Set up your {med.name} routine?</p>
+      <ul style={{ listStyle: 'none', margin: '0.5rem 0 0.75rem', padding: 0, display: 'grid', gap: '0.25rem' }}>
+        {irPresetLines(med).map((l) => (
+          <li key={l.label} style={{ fontSize: '0.875rem', color: l.already ? 'var(--subtle)' : 'var(--text)' }}>
+            <strong>{l.label}</strong> · {l.already ? 'already set up' : l.text}
+          </li>
+        ))}
+      </ul>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button onClick={() => { onApply(med); dismiss(); }} className="app-btn-primary" style={{ flex: 1 }}>Set up</button>
+        <button
+          onClick={dismiss}
+          style={{
+            padding: '0 1rem', borderRadius: '0.75rem', cursor: 'pointer',
+            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '0.875rem', fontWeight: 700,
+          }}
+        >
+          Not now
+        </button>
+      </div>
     </div>
   );
 }

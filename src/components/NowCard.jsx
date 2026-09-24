@@ -124,7 +124,8 @@ export default function NowCard({ meds, doses, runs, kit, savedMeals = [], onSte
 
   return (
     <Shell tone="plain" label="TODAY" Icon={PartyPopper}>
-      <Big small>All done for today</Big>
+      {/* "All done" would be a lie on a day with misses; this is just true. */}
+      <Big small>Nothing left for today</Big>
     </Shell>
   );
 }

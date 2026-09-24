@@ -33,8 +33,8 @@ export default function MyMeals() {
   // The four that work, one tap to add while the list is empty. The protein
   // figures are rough label numbers, there so the choices can be compared.
   const STARTERS = [
-    { name: '2 boiled eggs', note: '~12 g protein' },
-    { name: 'RXBAR', note: '~12 g protein' },
+    { name: '1 egg', note: 'Before dose 1' },
+    { name: 'Ready Clean Bar', note: 'Before doses 2 and 3' },
     { name: 'Banana + 2 tbsp peanut butter', note: '~9 g protein' },
     { name: 'Snack', note: 'Anything with some protein' },
   ];
@@ -56,12 +56,12 @@ export default function MyMeals() {
 
       {rxMeals.length === 0 && (
         <div className="app-card" style={{ padding: '0.875rem', marginBottom: '0.75rem', borderColor: 'var(--accent)' }}>
-          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>Start with your usual four</p>
+          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>Start with your usual meals</p>
           <ul style={{ margin: '0 0 0.625rem 1rem', padding: 0, fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.6 }}>
             {starters.map((m) => <li key={m.name}>{m.name} <span style={{ color: 'var(--subtle)' }}>· {m.note}</span></li>)}
           </ul>
           <button onClick={() => saveRxMeal(starters.map((m) => ({ ...m, status: 'ok' })))} className="app-btn-primary">
-            Add all four
+            Add all of these
           </button>
         </div>
       )}
