@@ -7,6 +7,7 @@ import { pruneSessions } from '../lib/stats.js';
 import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/meds.js';
 import { markStep, markAte, pruneRuns } from '../lib/routine.js';
 import { addGlass, removeLastGlass } from '../lib/water.js';
+import { saveMeal } from '../lib/mealLibrary.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -67,6 +68,7 @@ export function AppProvider({ children, uid }) {
   const [rxWater, setWater] = useState(() => storage.getWater());
   const [rxClientSent, setClientSent] = useState(() => storage.getClientSent());
   const [rxEffects, setEffects] = useState(() => storage.getEffects());
+  const [rxMeals, setMeals] = useState(() => storage.getMeals());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -76,7 +78,7 @@ export function AppProvider({ children, uid }) {
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
     crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
-    rxRoutineRuns, rxWater, rxClientSent, rxEffects,
+    rxRoutineRuns, rxWater, rxClientSent, rxEffects, rxMeals,
   };
 
   const setters = useRef({
@@ -94,6 +96,7 @@ export function AppProvider({ children, uid }) {
     rxWater: setWater,
     rxClientSent: setClientSent,
     rxEffects: setEffects,
+    rxMeals: setMeals,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -485,6 +488,17 @@ export function AppProvider({ children, uid }) {
     persist('rxEffects', stateRef.current.rxEffects.filter((e) => e.id !== id));
   }, [persist]);
 
+  // ── My meals ────────────────────────────────────────────────────────────
+
+  /** Add a meal, or update the saved one with the same name. */
+  const saveRxMeal = useCallback((meal) => {
+    persist('rxMeals', saveMeal(stateRef.current.rxMeals, meal, generateId()));
+  }, [persist]);
+
+  const deleteRxMeal = useCallback((id) => {
+    persist('rxMeals', stateRef.current.rxMeals.filter((m) => m.id !== id));
+  }, [persist]);
+
   // ── Pill counts ─────────────────────────────────────────────────────────
   // What was actually in the bottle against what the log says should be.
   // `apply` makes the physical count the new truth; either way the check is
@@ -542,6 +556,7 @@ export function AppProvider({ children, uid }) {
       rxWater, addWater, undoWater,
       rxClientSent, markClientSent,
       rxEffects, addEffect, deleteEffect, recordPillCount,
+      rxMeals, saveRxMeal, deleteRxMeal,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}

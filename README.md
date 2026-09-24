@@ -175,6 +175,22 @@ dose, how long before the dose each was eaten, and the average focus after
 each food where a check-in was answered (`src/lib/meals.js`). Meals are also
 in the doctor report and have their own CSV download.
 
+### My meals
+
+Settings → My meals (`/meals`) keeps two lists the user builds: meals that
+**work with my dose**, and ones to **avoid**, each with an optional note
+("vitamin C, pharmacist said skip it"). Rx never marks a food safe or unsafe.
+- The approved meals appear as one-tap chips in the routine editor's meal
+  steps and in "Had something else?" on Today.
+- Anything logged or planned that contains an avoided item is flagged in red,
+  with its note.
+- A meal eaten that isn't on either list can be saved in one tap, unless it
+  contains something avoided.
+- Meals already eaten before doses are offered on the page for quick
+  approval.
+
+The logic is `src/lib/mealLibrary.js`, stored as `rxMeals`.
+
 ### Water
 
 Switched on in Settings: a glass counter on Today, one tap per glass (hold to

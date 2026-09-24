@@ -27,6 +27,7 @@ const KEYS = {
   WATER: 'rx_water',
   CLIENT_SENT: 'rx_client_sent',
   EFFECTS: 'rx_effects',
+  MEALS: 'rx_meals',
 };
 
 function get(key) {
@@ -101,6 +102,8 @@ export const storage = {
   setClientSent: (v) => set(KEYS.CLIENT_SENT, v),
   getEffects: () => get(KEYS.EFFECTS) || [],
   setEffects: (v) => set(KEYS.EFFECTS, v),
+  getMeals: () => get(KEYS.MEALS) || [],
+  setMeals: (v) => set(KEYS.MEALS, v),
 };
 
 // The Firestore field names, which are also the localStorage slices. One list,
@@ -126,4 +129,6 @@ export const CLOUD_FIELDS = {
   rxClientSent: [storage.getClientSent, storage.setClientSent],
   // Focus / mood / appetite / side-effect check-ins — see lib/effects.js.
   rxEffects: [storage.getEffects, storage.setEffects],
+  // My meals: approved and avoided — see lib/mealLibrary.js.
+  rxMeals: [storage.getMeals, storage.setMeals],
 };

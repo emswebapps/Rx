@@ -227,6 +227,26 @@ export default function SettingsView() {
       </div>
 
       <div style={section}>
+        <h2 style={h2}>MY MEALS</h2>
+        <button
+          onClick={() => navigate('/meals')}
+          style={{
+            width: '100%', padding: '0.875rem 1rem', borderRadius: '0.875rem', cursor: 'pointer', textAlign: 'left',
+            backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
+            fontSize: '0.9375rem', fontWeight: 700, display: 'flex', alignItems: 'center',
+          }}
+        >
+          <span style={{ flex: 1 }}>
+            Meals that work with my dose
+            <span style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 400, color: 'var(--subtle)' }}>
+              {(app.rxMeals || []).length ? `${app.rxMeals.length} saved` : 'Save them once, pick them every day'}
+            </span>
+          </span>
+          <ChevronRight size={18} style={{ color: 'var(--muted)' }} />
+        </button>
+      </div>
+
+      <div style={section}>
         <h2 style={h2}>FOR MY DOCTOR, AND MY DATA</h2>
         <button onClick={() => navigate('/report')} className="app-btn-primary" style={{ width: '100%', marginBottom: '0.625rem' }}>
           Doctor visit report

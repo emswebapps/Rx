@@ -3,6 +3,9 @@ import { Check, Hourglass, Pill as PillGlyph, Lock, Utensils } from 'lucide-reac
 import { useNow } from '../lib/useCountdown.js';
 import { formatClock } from '../lib/time.js';
 import { routineState, formatCountdown } from '../lib/routine.js';
+import MealChips, { AvoidWarning } from './MealChips.jsx';
+import { useApp } from '../context/AppContext';
+import { findMeal, avoidHits } from '../lib/mealLibrary.js';
 
 /**
  * The routine around one dose, on Today.
@@ -220,7 +223,12 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
   const done = step.state === 'done';
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(step.ate || '');
-  const save = () => { onAte?.(text); setEditing(false); };
+  const save = (value = text) => { onAte?.(value); setEditing(false); };
+  const { rxMeals, saveRxMeal } = useApp();
+  const eaten = done ? (step.ate || step.text) : step.text;
+  // Offer to approve what was eaten — but never something with an avoided
+  // item in it; that would put it on the "works for me" list by accident.
+  const unsaved = done && step.ate && !findMeal(rxMeals, step.ate) && avoidHits(rxMeals, step.ate).length === 0;
 
   return (
     <li>
@@ -256,6 +264,14 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
         )}
       </button>
 
+      <div style={{ marginLeft: '2.125rem' }}><AvoidWarning text={eaten} /></div>
+
+      {done && !readOnly && onAte && (editing ? (
+        <div style={{ margin: '0.25rem 0 0.25rem 2.125rem' }}>
+          <MealChips selected={text} onPick={(name) => save(name)} max={8} />
+        </div>
+      ) : null)}
+
       {done && !readOnly && onAte && (editing ? (
         <div style={{ display: 'flex', gap: '0.375rem', margin: '0.125rem 0 0.25rem 2.125rem' }}>
           <input
@@ -267,7 +283,7 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
             className="app-input"
             style={{ flex: 1, minWidth: 0, padding: '0.4375rem 0.625rem', fontSize: '0.875rem' }}
           />
-          <button onClick={save} className="app-btn-primary" style={{ padding: '0.4375rem 0.875rem', fontSize: '0.8125rem' }}>
+          <button onClick={() => save()} className="app-btn-primary" style={{ width: 'auto', flex: 'none', padding: '0.4375rem 0.875rem', fontSize: '0.8125rem' }}>
             Save
           </button>
         </div>
@@ -282,6 +298,18 @@ function MealStep({ step, readOnly, faded, onToggle, onAte }) {
           {step.ate ? 'Change what I had' : 'Had something else?'}
         </button>
       ))}
+
+      {unsaved && !editing && !readOnly && (
+        <button
+          onClick={() => saveRxMeal({ name: step.ate, status: 'ok' })}
+          style={{
+            margin: '0 0 0.25rem 2.125rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.8125rem', fontWeight: 700, color: 'var(--muted)', display: 'block',
+          }}
+        >
+          + Save “{step.ate}” to my meals
+        </button>
+      )}
     </li>
   );
 }

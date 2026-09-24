@@ -1,5 +1,6 @@
 import { Plus, X, ChevronUp, ChevronDown, Hourglass, Pill, ListChecks, Utensils } from 'lucide-react';
 import { routinePreset } from '../lib/routine.js';
+import MealChips, { AvoidWarning } from './MealChips.jsx';
 
 /**
  * The steps around one dose time, in the order they're done.
@@ -70,10 +71,10 @@ export default function RoutineEditor({ routine, onChange }) {
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.375rem' }}>
         {steps.map((s, i) => (
           <li key={s.id} style={{
-            display: 'flex', alignItems: 'center', gap: '0.375rem',
             padding: '0.375rem 0.375rem 0.375rem 0.625rem', borderRadius: '0.625rem',
             backgroundColor: 'var(--surface)', border: '1px solid var(--border)',
           }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--subtle)', width: '1rem' }}>{i + 1}</span>
             {s.kind === 'dose' ? (
               <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)' }}>
@@ -119,6 +120,13 @@ export default function RoutineEditor({ routine, onChange }) {
             {s.kind !== 'dose' && (
               <IconBtn label="Remove step" onClick={() => remove(s.id)}><X size={15} /></IconBtn>
             )}
+          </div>
+          {s.kind === 'meal' && (
+            <div style={{ padding: '0.375rem 0 0.125rem 1.375rem' }}>
+              <MealChips selected={s.text} onPick={(name) => update(s.id, { text: name })} max={8} />
+              <AvoidWarning text={s.text} />
+            </div>
+          )}
           </li>
         ))}
       </ol>
