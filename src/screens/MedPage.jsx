@@ -366,6 +366,15 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
               canRemove={med.schedule.times.length > 1}
               onChange={(patch) => setTime(time.id, patch)}
               onRemove={() => removeTime(time.id)}
+              onCopyRoutine={med.schedule.times.length > 1 ? () => setSchedule({
+                // Same steps on every dose, each with its own ids so the
+                // doses keep separate check-offs.
+                times: med.schedule.times.map((t) => (t.id === time.id ? t : {
+                  ...t,
+                  routine: (time.routine || []).map((st, i) => ({ ...st, id: `${st.id}-${t.id}-${i}` })),
+                  routineSince: t.routineSince || Date.now(),
+                })),
+              }) : null}
             />
           ))}
         </div>
@@ -659,7 +668,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
  * one-tablet morning and a two-tablet afternoon is ordinary and the supply
  * maths has to know the difference.
  */
-function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) {
+function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove, onCopyRoutine }) {
   return (
     <div style={{
       padding: '0.875rem', borderRadius: '0.875rem',
@@ -749,6 +758,7 @@ function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) 
 
       <RoutineEditor
         routine={time.routine}
+        onCopyToAll={onCopyRoutine}
         // Stamped when first set up, so the days before don't count as a
         // routine not followed.
         onChange={(routine) => onChange({

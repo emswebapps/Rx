@@ -175,6 +175,18 @@ dose, how long before the dose each was eaten, and the average focus after
 each food where a check-in was answered (`src/lib/meals.js`). Meals are also
 in the doctor report and have their own CSV download.
 
+### Eat → wait → take, in one tap
+
+The routine that works is always the same shape: something to eat, fifteen
+minutes, the dose. The editor offers it as one button (*eat → wait 15 min →
+take*, the food defaulting to "Snack") and **Use for every dose** copies it
+across a medication's times.
+
+On Today the top card shows the saved meals as buttons when it's time to eat.
+Tapping the one being eaten checks the meal off, records the food, and starts
+the countdown, all in one write. The routine beside the dose is a single
+line, e.g. *✓ RXBAR → 14:59 → Take*. Tapping the food undoes it.
+
 ### My meals
 
 Settings → My meals (`/meals`) keeps two lists the user builds: meals that

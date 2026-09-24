@@ -55,7 +55,7 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
-    rxNotes, addRxNote, rxEffects, addEffect,
+    rxNotes, addRxNote, rxEffects, addEffect, rxMeals,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
@@ -191,7 +191,11 @@ export default function RxHome() {
               doses={crashDoses}
               runs={rxRoutineRuns}
               kit={kit}
-              onStep={(entry, stepId) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now())}
+              savedMeals={rxMeals}
+              onStep={(entry, stepId, ate) => (
+                // null clears any "ate instead" from an earlier tap.
+                checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now(), ate ?? null)
+              )}
               onOpenDose={(key) => setOpenKey(key)}
               onCrash={() => navigate('/crash')}
               onCheckIn={() => checkInCrash()}
@@ -318,8 +322,6 @@ export default function RxHome() {
                           routine={routine}
                           when={when}
                           onToggleStep={(stepId, at) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, at)}
-                          onAte={(stepId, text) => setRoutineAte(day, entry.medId, entry.slotId, stepId, text)}
-                          onTake={() => take(entry)}
                           onOpenDose={() => setOpenKey(entry.key)}
                         />
                       )}

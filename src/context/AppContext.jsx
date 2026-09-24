@@ -443,8 +443,13 @@ export function AppProvider({ children, uid }) {
   // recorded as it happens and flushed straight away: the phone is about to be
   // put down for thirty minutes.
 
-  const checkRoutineStep = useCallback((dayTs, medId, slotId, stepId, at = Date.now()) => {
-    const next = pruneRuns(markStep(stateRef.current.rxRoutineRuns, dayTs, medId, slotId, stepId, at));
+  // `ate` (optional) records what was eaten in the same write — two calls in
+  // a row would each start from the runs as they were, and the second would
+  // quietly drop the first.
+  const checkRoutineStep = useCallback((dayTs, medId, slotId, stepId, at = Date.now(), ate = undefined) => {
+    let runs = markStep(stateRef.current.rxRoutineRuns, dayTs, medId, slotId, stepId, at);
+    if (ate !== undefined) runs = markAte(runs, dayTs, medId, slotId, stepId, ate);
+    const next = pruneRuns(runs);
     persist('rxRoutineRuns', next);
     if (uid) saveUserData(uid, { rxRoutineRuns: next });
   }, [persist, uid]);
@@ -490,9 +495,16 @@ export function AppProvider({ children, uid }) {
 
   // ── My meals ────────────────────────────────────────────────────────────
 
-  /** Add a meal, or update the saved one with the same name. */
-  const saveRxMeal = useCallback((meal) => {
-    persist('rxMeals', saveMeal(stateRef.current.rxMeals, meal, generateId()));
+  /**
+   * Add a meal, or update the saved one with the same name. Takes a list too,
+   * saved in one write — several calls in a row would each start from the
+   * list as it was before the others landed.
+   */
+  const saveRxMeal = useCallback((mealOrMeals) => {
+    const meals = Array.isArray(mealOrMeals) ? mealOrMeals : [mealOrMeals];
+    let list = stateRef.current.rxMeals;
+    for (const m of meals) list = saveMeal(list, m, generateId());
+    persist('rxMeals', list);
   }, [persist]);
 
   const deleteRxMeal = useCallback((id) => {

@@ -30,6 +30,16 @@ export default function MyMeals() {
     .filter((f) => f && !known.has(f.toLowerCase()))
     .slice(0, 8);
 
+  // The four that work, one tap to add while the list is empty. The protein
+  // figures are rough label numbers, there so the choices can be compared.
+  const STARTERS = [
+    { name: '2 boiled eggs', note: '~12 g protein' },
+    { name: 'RXBAR', note: '~12 g protein' },
+    { name: 'Banana + 2 tbsp peanut butter', note: '~9 g protein' },
+    { name: 'Snack', note: 'Anything with some protein' },
+  ];
+  const starters = STARTERS.filter((m) => !known.has(m.name.toLowerCase()));
+
   const add = () => {
     if (!name.trim()) return;
     saveRxMeal({ name, note, status });
@@ -43,6 +53,18 @@ export default function MyMeals() {
         Meals you know work with your dose, and ones to avoid. You decide what goes here — ask your
         prescriber or pharmacist if you’re not sure about a food.
       </p>
+
+      {rxMeals.length === 0 && (
+        <div className="app-card" style={{ padding: '0.875rem', marginBottom: '0.75rem', borderColor: 'var(--accent)' }}>
+          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>Start with your usual four</p>
+          <ul style={{ margin: '0 0 0.625rem 1rem', padding: 0, fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.6 }}>
+            {starters.map((m) => <li key={m.name}>{m.name} <span style={{ color: 'var(--subtle)' }}>· {m.note}</span></li>)}
+          </ul>
+          <button onClick={() => saveRxMeal(starters.map((m) => ({ ...m, status: 'ok' })))} className="app-btn-primary">
+            Add all four
+          </button>
+        </div>
+      )}
 
       <div className="app-card" style={{ padding: '0.875rem', display: 'grid', gap: '0.5rem' }}>
         <input

@@ -4,6 +4,7 @@ import { formatClock } from '../lib/time.js';
 import { expectedDosesOnDay, effectiveWindow } from '../lib/meds.js';
 import { routinesForDay, formatCountdown } from '../lib/routine.js';
 import { nextUp, formatUntil } from '../lib/next.js';
+import { okMeals } from '../lib/mealLibrary.js';
 
 /**
  * The top of Today: one thing, with its clock.
@@ -12,7 +13,7 @@ import { nextUp, formatUntil } from '../lib/next.js';
  * minute-old view, so a wait that runs out flips straight to "take it now"
  * instead of sitting at 0:00 for the rest of the minute.
  */
-export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, onCrash, onCheckIn }) {
+export default function NowCard({ meds, doses, runs, kit, savedMeals = [], onStep, onOpenDose, onCrash, onCheckIn }) {
   const now = useNow({ tick: 1000 });
   const schedule = expectedDosesOnDay(meds, doses, now, now);
   const routines = routinesForDay(schedule, runs, now, now);
@@ -27,6 +28,42 @@ export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, on
         <Big>{formatCountdown(left)}</Big>
         <Sub>Ends {formatClock(next.endsAt)} · your phone will buzz</Sub>
         <Bar pct={1 - left / total} />
+      </Shell>
+    );
+  }
+
+  if (next.kind === 'step' && next.step.kind === 'meal') {
+    // Picking what you're eating IS checking the meal off: one tap records
+    // the food and starts the wait. The routine's own meal comes first.
+    const planned = next.step.text;
+    const options = [planned, ...okMeals(savedMeals).map((m) => m.name)
+      .filter((n) => n.toLowerCase() !== planned.toLowerCase())].slice(0, 6);
+    const waits = next.routine.steps[next.routine.steps.indexOf(next.step) + 1]?.kind === 'wait';
+    return (
+      <Shell
+        tone="accent"
+        label={next.afterDose ? `AFTER YOUR ${name(next.entry).toUpperCase()}` : `EAT FIRST · ${name(next.entry)} at ${formatClock(next.entry.expectedAt)}`}
+        Icon={Utensils}
+      >
+        <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', marginTop: '0.375rem' }}>
+          {waits ? 'Tap what you’re eating — the timer starts' : 'Tap what you ate'}
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem', marginTop: '0.5rem' }}>
+          {options.map((food, i) => (
+            <button
+              key={food}
+              onClick={() => onStep(next.entry, next.step.id, i === 0 ? null : food)}
+              style={{
+                padding: '0.625rem 0.5rem', borderRadius: '0.75rem', cursor: 'pointer',
+                backgroundColor: i === 0 ? 'var(--accent)' : 'var(--surface)',
+                border: `1px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}`,
+                color: i === 0 ? '#fff' : 'var(--text)', fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.25,
+              }}
+            >
+              {food}
+            </button>
+          ))}
+        </div>
       </Shell>
     );
   }
