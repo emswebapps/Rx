@@ -6,7 +6,7 @@ import {
   normalizeMed, supplyStatus, formatOffset, MED_KINDS, newMed, withDoseCount,
   DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount,
 } from '../lib/meds.js';
-import { headingStyle, Segmented, SupplyBar, ViewHeader, pageStyle } from '../components/medsUi.jsx';
+import { headingStyle, Segmented, SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
 import { formatHours } from '../lib/window.js';
@@ -249,7 +249,7 @@ function EditMed({ id }) {
 // ── The form itself ─────────────────────────────────────────────────────────
 
 function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenNotes, banner }) {
-  const { crashMeds } = useApp();
+  const { crashMeds, crashDoses } = useApp();
   const [advanced, setAdvanced] = useState(false);
 
   const setSchedule = (patch) => set({ schedule: { ...med.schedule, ...patch } });
@@ -268,7 +268,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
   // A med can hang off any other med, but never off itself — that's a chain
   // with no beginning, and the resolver would just give up and say "unknown".
   const anchors = crashMeds.filter((m) => m.id !== med.id && m.active !== false);
-  const status = supplyStatus(med, Date.now());
+  const status = supplyStatus(med, Date.now(), crashDoses);
 
   const addRule = () => set({
     rules: [...(med.rules || []), { id: `r-${Date.now()}`, text: '', offsetMinutes: -60 }],
@@ -425,6 +425,7 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
         </div>
 
         <SupplyBar status={status} />
+        <RunOutLine status={status} />
 
         {refill && (
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.875rem' }}>

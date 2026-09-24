@@ -429,7 +429,8 @@ test('no medication notification ever names the medication', () => {
   const lowSupply = {
     crashMeds: [
       { ...XR_ROUTINE, supply: { onHand: 1, perDose: 1, lowDays: 7, refillFrom: '2026-07-26' }, note: 'Walgreens on Fifth' },
-      IR,
+      // Two left and the fill date is days away: runs out before the refill.
+      { ...IR, supply: { onHand: 2, perDose: 1, lowDays: 1, refillFrom: '2026-07-31' } },
     ],
     crashDrafts: [{ id: 'x1', text: 'the giant text I nearly sent', status: 'held', releaseAt: NOW - HOUR }],
   };
@@ -455,7 +456,8 @@ test('no medication notification ever names the medication', () => {
       for (const m of [0, 15, 30, 45]) {
         for (const msg of collectCrashMessages(data, {}, localAt(h, m), TZ)) {
           seen.add(msg.tag.startsWith('rx-water-') ? 'rx-water'
-            : msg.tag.replace(/-\d{4}-\d{2}-\d{2}$/, ''));
+            : msg.tag.startsWith('crash-short-') ? msg.tag.replace(/-ir-.*$/, '-ir')
+              : msg.tag.replace(/-\d{4}-\d{2}-\d{2}$/, ''));
           const blob = `${msg.title} ${msg.body}`;
           for (const secret of secrets) {
             assert.ok(!blob.includes(secret), `${msg.tag} leaked ${JSON.stringify(secret)}`);
@@ -471,6 +473,7 @@ test('no medication notification ever names the medication', () => {
     'crash-dose-ir-t1', 'crash-dose-xr-t1', 'crash-escrow', 'crash-late-ir-t1',
     'crash-late-xr-t1', 'crash-note', 'crash-refill-xr', 'crash-rule-xr-eat',
     'crash-window-d-xr', 'rx-wait-2026-07-26_xr_t1-w', 'rx-water',
+    'crash-short-ir', 'crash-short-soon-ir',
   ].sort());
 });
 
@@ -552,4 +555,37 @@ test('the routine wait can be switched off on its own', () => {
     notifPrefs: { crash: { ...ALL_ON, routineWait: false } },
   });
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 40), TZ)), []);
+});
+
+// ── Running out before the refill date ──────────────────────────────────────
+
+const SHORT = (onHand, refillFrom) => withRegimen({
+  crashMeds: [{ ...XR, supply: { onHand, perDose: 1, lowDays: 1, refillFrom } }],
+  crashDoses: [],
+});
+const shortTags = (msgs) => tags(msgs).filter((t) => t.startsWith('crash-short'));
+
+test('says so as soon as the pills in hand won’t reach the refill date', () => {
+  // 10 left, one a day from today: out on Aug 5. Refill Aug 10.
+  const msgs = collectCrashMessages(SHORT(10, '2026-08-10'), {}, localAt(7), TZ);
+  assert.deepStrictEqual(shortTags(msgs), ['crash-short-xr-2026-08-10-2026-08-05']);
+  const m = msgs.find((x) => x.tag.startsWith('crash-short'));
+  assert.strictEqual(m.url, `${RX_APP_URL}supply`);
+  // Once, not every tick.
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(10, '2026-08-10'), { [m.tag]: 1 }, localAt(8), TZ)), []);
+});
+
+test('and again three days out if it still is', () => {
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(3, '2026-08-10'), {}, localAt(7), TZ)), [
+    'crash-short-xr-2026-08-10-2026-07-29', 'crash-short-soon-xr-2026-08-10-2026-07-29',
+  ]);
+});
+
+test('quiet when the supply reaches the refill date, or the pref is off', () => {
+  assert.deepStrictEqual(shortTags(collectCrashMessages(SHORT(30, '2026-08-10'), {}, localAt(7), TZ)), []);
+  const off = withRegimen({
+    crashMeds: [{ ...XR, supply: { onHand: 3, perDose: 1, lowDays: 1, refillFrom: '2026-08-10' } }],
+    crashDoses: [], notifPrefs: { crash: { ...ALL_ON, supplyGap: false } },
+  });
+  assert.deepStrictEqual(shortTags(collectCrashMessages(off, {}, localAt(7), TZ)), []);
 });

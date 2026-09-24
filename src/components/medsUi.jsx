@@ -86,6 +86,51 @@ export function Segmented({ options, value, onChange, style }) {
  * Deliberately says nothing at all when nothing is being counted. An empty bar
  * would read as "you're out", which is the one wrong answer here.
  */
+/** "Tue, Sep 30" — the day a supply runs out. */
+export function formatRunOut(ts) {
+  return new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/**
+ * The line that answers "when do I run out, and will I make it to the refill?"
+ *
+ * Counted dose by dose from what's physically in hand (see `runOut` in
+ * meds.js). When the bottle empties before the fill date it says so in red,
+ * with the number of days you'd go without — the one supply fact that needs
+ * acting on now, while there's still time to call the pharmacy or the doctor.
+ */
+export function RunOutLine({ status }) {
+  if (!status.tracked || status.runOutAt == null) return null;
+  const when = status.coverDays === 0 ? 'today'
+    : status.coverDays === 1 ? 'tomorrow'
+      : `${formatRunOut(status.runOutAt)} · in ${status.coverDays} days`;
+
+  if (!status.shortBeforeRefill) {
+    return (
+      <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.375rem' }}>
+        Runs out <strong style={{ color: 'var(--text)' }}>{when}</strong>
+        {status.refillAt != null && !status.refillOpen ? ' — after your refill date, so you’re covered.' : ''}
+      </p>
+    );
+  }
+
+  return (
+    <div style={{
+      marginTop: '0.625rem', padding: '0.75rem', borderRadius: '0.75rem',
+      backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger)',
+    }}>
+      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--danger)', lineHeight: 1.4 }}>
+        Runs out {when} — before you can refill
+      </p>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--text)', lineHeight: 1.45, marginTop: '0.25rem' }}>
+        Refill opens {formatRunOut(status.refillAt)}. That’s {status.gapDays} scheduled{' '}
+        {status.gapDays === 1 ? 'day' : 'days'} without it unless something changes — worth calling
+        the pharmacy or your prescriber now.
+      </p>
+    </div>
+  );
+}
+
 export function SupplyBar({ status }) {
   if (!status.tracked) {
     if (!status.refillAt) return null;

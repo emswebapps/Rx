@@ -107,7 +107,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790568000000,
+            "coverDays": 30,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -117,7 +121,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -238,7 +246,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -248,7 +260,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -369,7 +385,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -379,7 +399,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -500,7 +524,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -510,7 +538,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -637,7 +669,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -647,7 +683,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788408000000,
+            "coverDays": 5,
+            "gapDays": 1,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -780,7 +820,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -790,7 +834,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788408000000,
+            "coverDays": 5,
+            "gapDays": 1,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -911,7 +959,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -921,7 +973,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -1063,7 +1119,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790568000000,
+            "coverDays": 30,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -1073,7 +1133,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -1194,7 +1258,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -1204,7 +1272,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -1318,7 +1390,11 @@
             "perDay": 1,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1790654400000,
+            "coverDays": 31,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           },
           {
             "medId": "ir",
@@ -1328,7 +1404,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -1393,7 +1473,11 @@
             "perDay": 1,
             "low": true,
             "refillOpen": false,
-            "daysUntilRefill": 6
+            "daysUntilRefill": 6,
+            "runOutAt": 1788321600000,
+            "coverDays": 4,
+            "gapDays": 2,
+            "shortBeforeRefill": true
           }
         ]
       }
@@ -1462,7 +1546,11 @@
             "perDay": 2.142857142857143,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1789358400000,
+            "coverDays": 16,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           }
         ]
       }
@@ -1548,7 +1636,11 @@
             "perDay": 3,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1788840000000,
+            "coverDays": 10,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           }
         ]
       }
@@ -1652,7 +1744,11 @@
             "perDay": 3,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1788840000000,
+            "coverDays": 10,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           }
         ]
       }
@@ -1763,7 +1859,11 @@
             "perDay": 3,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1788926400000,
+            "coverDays": 11,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           }
         ]
       }
@@ -1866,7 +1966,11 @@
             "perDay": 3,
             "low": false,
             "refillOpen": false,
-            "daysUntilRefill": null
+            "daysUntilRefill": null,
+            "runOutAt": 1788840000000,
+            "coverDays": 10,
+            "gapDays": 0,
+            "shortBeforeRefill": false
           }
         ]
       }

@@ -359,7 +359,7 @@ function dueRules(meds, doses, now, tz, grace) {
 }
 
 /** See supplyStatus in src/rx/meds.js. */
-function supplyStatus(med, now, tz) {
+function supplyStatus(med, now, tz, doses) {
   const m = normalizeMed(med);
   const s = m.supply || {};
   const onHand = countOrNull(s.onHand);
@@ -378,17 +378,57 @@ function supplyStatus(med, now, tz) {
     return {
       tracked: false, onHand: null, perDay, form: m.form, dosesLeft: null, daysLeft: null,
       low: false, lowDays, refillFrom: s.refillFrom || '', refillAt, refillOpen, daysUntilRefill,
+      runOutAt: null, coverDays: null, gapDays: 0, shortBeforeRefill: false,
     };
   }
 
   const smallest = Math.min(...m.schedule.times.map((t) => positive(t.amount, 1)));
   const dosesLeft = Math.floor(onHand / smallest);
   const daysLeft = perDay > 0 ? Math.floor(onHand / perDay) : null;
-  return {
+  return Object.assign({
     tracked: true, onHand, perDay, form: m.form, dosesLeft, daysLeft,
     low: daysLeft != null && daysLeft <= lowDays, lowDays,
     refillFrom: s.refillFrom || '', refillAt, refillOpen, daysUntilRefill,
-  };
+  }, runOut(m, onHand, now, tz, doses, refillAt));
+}
+
+/** The local midnight `n` days after the one containing `ts`, in `tz`. */
+function addDays(ts, n, tz) {
+  const p = tzParts(ts, tz);
+  const d = new Date(Date.UTC(p.year, p.month - 1, p.day + n));
+  return wallClock(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), 0, 0, tz);
+}
+
+const RUN_OUT_HORIZON_DAYS = 400;
+
+/** See runOut in src/lib/meds.js. */
+function runOut(m, onHand, now, tz, doses, refillAt) {
+  const today = startOfDay(now, tz);
+  const loggedToday = Array.isArray(doses) ? entriesForMedOnDay(m.id, doses, now, tz).length : 0;
+  let remaining = onHand;
+  let runOutAt = null;
+
+  for (let i = 0; i < RUN_OUT_HORIZON_DAYS && runOutAt == null; i += 1) {
+    const day = addDays(today, i, tz);
+    if (!scheduledOnDay(m, day, tz)) continue;
+    const slots = i === 0 ? m.schedule.times.slice(loggedToday) : m.schedule.times;
+    for (const t of slots) {
+      const amount = positive(t.amount, 1);
+      if (remaining < amount) { runOutAt = day; break; }
+      remaining -= amount;
+    }
+  }
+
+  if (runOutAt == null) return { runOutAt: null, coverDays: null, gapDays: 0, shortBeforeRefill: false };
+
+  const coverDays = Math.round((runOutAt - today) / (24 * HOUR_MS));
+  let gapDays = 0;
+  if (refillAt != null && runOutAt < refillAt) {
+    for (let d = runOutAt; d < refillAt; d = addDays(d, 1, tz)) {
+      if (scheduledOnDay(m, d, tz)) gapDays += 1;
+    }
+  }
+  return { runOutAt, coverDays, gapDays, shortBeforeRefill: gapDays > 0 };
 }
 
 module.exports = {

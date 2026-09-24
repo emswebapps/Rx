@@ -283,6 +283,25 @@ function collectCrashMessages(data, sent, now, tz) {
     }
   }
 
+  // ── Running out before the refill date ──
+  // Counted dose by dose from what's in hand. Said the moment it becomes true
+  // — that's when there's most time to get it sorted — and once more three
+  // days out if it still is. Keyed on the refill date and the run-out day, so
+  // a changed count or a new fill date that's still short says so again.
+  if (tracking && prefs.supplyGap !== false) {
+    for (const med of regimen.activeMeds(meds)) {
+      const status = regimen.supplyStatus(med, now, tz, doses);
+      if (!status.shortBeforeRefill) continue;
+      const key = `${med.id}-${status.refillFrom}-${regimen.tzParts(status.runOutAt, tz).date}`;
+      push(`crash-short-${key}`, 'Heads up on a refill',
+        'You may run out before you can refill. Tap to check.', `${RX_APP_URL}supply`);
+      if (status.coverDays <= 3) {
+        push(`crash-short-soon-${key}`, 'Running out soon',
+          'You may run out before you can refill. Tap to check.', `${RX_APP_URL}supply`);
+      }
+    }
+  }
+
   // ── Running low ──
   if (tracking && prefs.refillLow !== false) {
     for (const med of regimen.activeMeds(meds)) {

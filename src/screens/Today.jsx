@@ -17,6 +17,7 @@ import ScheduleRow, { DoseSheet, TimeEditor } from '../components/ScheduleRow.js
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
+import { formatRunOut } from '../components/medsUi.jsx';
 import RoutineCard from '../components/RoutineCard.jsx';
 import WaterRow from '../components/WaterRow.jsx';
 import ComplianceCard from '../components/ComplianceRing.jsx';
@@ -82,8 +83,9 @@ export default function RxHome() {
     : null;
 
   const needsAttention = activeMeds(crashMeds)
-    .map((m) => ({ med: m, supply: supplyStatus(m, now) }))
-    .filter(({ supply }) => supply.low || supply.refillOpen);
+    .map((m) => ({ med: m, supply: supplyStatus(m, now, crashDoses) }))
+    .filter(({ supply }) => supply.low || supply.refillOpen || supply.shortBeforeRefill);
+  const short = needsAttention.filter(({ supply }) => supply.shortBeforeRefill);
 
   const adherence = adherenceSentence(adherenceDays(crashMeds, crashDoses, { now }));
 
@@ -153,6 +155,34 @@ export default function RxHome() {
             </span>
           </button>
         )}
+
+        {/* ── Running out before the refill ──
+            Above the doses, because it's the one supply problem with a
+            deadline: the fix is a phone call that has to happen before the
+            bottle is empty, not after. */}
+        {isToday && tracking && short.map(({ med, supply }) => (
+          <button
+            key={med.id}
+            onClick={() => navigate('/supply')}
+            style={{
+              width: '100%', marginTop: '1.25rem', padding: '0.875rem 1rem', textAlign: 'left',
+              borderRadius: '1rem', cursor: 'pointer',
+              backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger)',
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+            }}
+          >
+            <Package size={20} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--danger)' }}>
+                {med.name || 'A medication'} runs out {supply.coverDays === 0 ? 'today'
+                  : supply.coverDays === 1 ? 'tomorrow' : formatRunOut(supply.runOutAt)}
+              </span>
+              <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text)', marginTop: '0.125rem' }}>
+                Refill opens {formatRunOut(supply.refillAt)} — {supply.gapDays} {supply.gapDays === 1 ? 'day' : 'days'} short
+              </span>
+            </span>
+          </button>
+        ))}
 
         {/* ── The doses, by the time they're due ── */}
         {tracking && (groups.length > 0 ? (
@@ -226,7 +256,7 @@ export default function RxHome() {
             </div>
 
             {/* ── Needs sorting ── */}
-            {needsAttention.length > 0 && (
+            {needsAttention.length > short.length && (
               <button
                 onClick={() => navigate('/supply')}
                 style={{
@@ -239,9 +269,9 @@ export default function RxHome() {
               >
                 <Package size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {needsAttention.length === 1
-                    ? `${needsAttention[0].med.name || 'One medication'} needs a refill`
-                    : `${needsAttention.length} need a refill`}
+                  {needsAttention.length - short.length === 1
+                    ? `${needsAttention.find(({ supply }) => !supply.shortBeforeRefill).med.name || 'One medication'} needs a refill`
+                    : `${needsAttention.length - short.length} need a refill`}
                 </span>
                 <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--warn)' }}>Supply</span>
               </button>

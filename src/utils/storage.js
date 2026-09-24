@@ -66,7 +66,7 @@ export const storage = {
       crash: {
         timerEnd: true, windowHeadsUp: true, escrowOpened: true, crashNote: true,
         doseDue: true, ruleReminders: true, refillLow: true,
-        routineWait: true, water: true,
+        routineWait: true, water: true, supplyGap: true,
         // Off until asked for: a second buzz about a dose whose moment has
         // already passed is mostly guilt.
         doseLate: false,

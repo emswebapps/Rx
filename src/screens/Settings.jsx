@@ -333,6 +333,12 @@ export default function SettingsView() {
             hint="Every interval after your first dose, until the goal or the cutoff. Tap “Drank one” to log it from the lock screen."
           />
           <Toggle
+            checked={notifPrefs.crash?.supplyGap ?? true}
+            onChange={(v) => setCrashPref('supplyGap', v)}
+            label="If I’ll run out before my refill date"
+            hint="Counted from the pills you actually have. As soon as it’s true, and again three days before you run out."
+          />
+          <Toggle
             checked={notifPrefs.crash?.refillLow ?? true}
             onChange={(v) => setCrashPref('refillLow', v)}
             label="When a supply is running low"

@@ -361,3 +361,51 @@ test('a schedule grown to more doses is still a schedule the app can read', () =
   assert.equal(m.schedule.times.length, 2);
   assert.ok(m.schedule.times.every((t) => t.mode === 'clock' && t.amount === 1));
 });
+
+// ── when it runs out ────────────────────────────────────────────────────────
+
+const iso = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const dayAfter = (n) => { const d = new Date(at(0)); d.setDate(d.getDate() + n); return d.getTime(); };
+
+test('runs out on the first day the count can’t cover a dose', () => {
+  // 5 tablets, one a day, nothing taken yet today: today through +4 are covered.
+  const s = supplyStatus(med({ supply: { onHand: 5 } }), at(7), []);
+  assert.strictEqual(s.runOutAt, dayAfter(5));
+  assert.strictEqual(s.coverDays, 5);
+});
+
+test('a dose already logged today has already come out of the count', () => {
+  const doses = [{ id: 'd', medId: 'm', takenAt: at(8), status: 'taken' }];
+  // 5 left AFTER this morning's: tomorrow through +5 are covered.
+  const s = supplyStatus(med({ supply: { onHand: 5 } }), at(9), doses);
+  assert.strictEqual(s.runOutAt, dayAfter(6));
+});
+
+test('days off stretch a bottle, and a two-tablet dose drains it twice as fast', () => {
+  // 2026-08-29 is a Saturday. Weekdays only, 3 tablets: Mon, Tue, Wed → out Thursday.
+  const weekdays = med({ schedule: { times: [{ id: 't1', mode: 'clock', time: '08:00', amount: 1 }], days: [1, 2, 3, 4, 5] }, supply: { onHand: 3 } });
+  assert.strictEqual(supplyStatus(weekdays, at(7), []).runOutAt, dayAfter(5));
+  const two = med({ schedule: { times: [{ id: 't1', mode: 'clock', time: '08:00', amount: 2 }] }, supply: { onHand: 5 } });
+  // 2 today, 2 tomorrow, 1 left isn't enough for a two-tablet dose.
+  assert.strictEqual(supplyStatus(two, at(7), []).runOutAt, dayAfter(2));
+});
+
+test('running out before the refill date is flagged, with the days you’d go without', () => {
+  const s = supplyStatus(med({ supply: { onHand: 3, refillFrom: iso(dayAfter(6)) } }), at(7), []);
+  assert.strictEqual(s.runOutAt, dayAfter(3));
+  assert.strictEqual(s.shortBeforeRefill, true);
+  assert.strictEqual(s.gapDays, 3);
+});
+
+test('enough to reach the refill date is not flagged', () => {
+  const s = supplyStatus(med({ supply: { onHand: 10, refillFrom: iso(dayAfter(6)) } }), at(7), []);
+  assert.strictEqual(s.shortBeforeRefill, false);
+  assert.strictEqual(s.gapDays, 0);
+});
+
+test('an empty bottle runs out today; an uncounted one never does', () => {
+  assert.strictEqual(supplyStatus(med({ supply: { onHand: 0 } }), at(7), []).coverDays, 0);
+  const u = supplyStatus(med({ supply: { onHand: null, refillFrom: iso(dayAfter(6)) } }), at(7), []);
+  assert.strictEqual(u.runOutAt, null);
+  assert.strictEqual(u.shortBeforeRefill, false);
+});

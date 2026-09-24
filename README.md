@@ -68,6 +68,20 @@ says so plainly rather than implying more precision than exists. A medication
 carries `createdAt` and `archivedAt` so the weeks before it existed, or after it
 stopped, are excluded rather than counted as clean.
 
+### When you'll run out
+
+Supply shows the **day the pills in hand stop covering the schedule**. It is
+counted forward one scheduled dose at a time from the real count, not
+averaged: days off stretch it, a two-tablet dose drains it twice as fast, and
+anything already logged today has already come out of the count (`runOut` in
+`meds.js`, ported to `functions/regimen.js` and pinned by the regimen fixture).
+
+If that day comes **before the refill date**, it's flagged in red on Supply, on
+the medication's page, and at the top of Today, with how many scheduled days
+you'd go without. A push goes out as soon as it becomes true, and again three
+days before you run out if it still is (the `supplyGap` switch in Settings).
+Like every Rx notification, it doesn't name the medication.
+
 ### The routine around a dose
 
 Some medication only works when it's taken the same way every time: *eat three
