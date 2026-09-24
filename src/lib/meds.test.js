@@ -12,7 +12,7 @@ import {
   normalizeMed, activeMeds, atClock, parseISODate, takenDoses,
   expectedDosesToday, nextExpected, effectiveWindow, ruleMoments, dueRules,
   supplyStatus, supplyAfterDose, supplyAfterUndo, formatOffset, rulesForMed,
-  newMed, withDoseCount,
+  newMed, withDoseCount, wearOffFor, formatHalfLife, countMismatches, formatCountDiff,
   DEFAULT_GRACE_MINUTES, DEFAULT_MED,
 } from './meds.js';
 
@@ -408,4 +408,33 @@ test('an empty bottle runs out today; an uncounted one never does', () => {
   const u = supplyStatus(med({ supply: { onHand: null, refillFrom: iso(dayAfter(6)) } }), at(7), []);
   assert.strictEqual(u.runOutAt, null);
   assert.strictEqual(u.shortBeforeRefill, false);
+});
+
+// ── the dose card's small print ─────────────────────────────────────────────
+
+test('a taken dose wears off its onset after it was taken; an untaken one is projected', () => {
+  const m = normalizeMed({ id: 'm', onsetHours: 4 });
+  assert.deepStrictEqual(wearOffFor({ med: m, state: 'taken', dose: { takenAt: at(8, 10) } }), { at: at(12, 10), projected: false });
+  assert.deepStrictEqual(wearOffFor({ med: m, state: 'upcoming', expectedAt: at(13) }), { at: at(17), projected: true });
+  assert.strictEqual(wearOffFor({ med: m, state: 'skipped-on-purpose', expectedAt: at(13) }), null);
+  assert.strictEqual(wearOffFor({ med: m, state: 'skipped', expectedAt: at(13) }), null);
+});
+
+test('half-life is only what was typed', () => {
+  assert.strictEqual(normalizeMed({}).halfLifeHours, null);
+  assert.strictEqual(normalizeMed({ halfLifeHours: 10 }).halfLifeHours, 10);
+  assert.strictEqual(formatHalfLife(9.75), '9.8h');
+  assert.strictEqual(formatHalfLife(null), null);
+});
+
+test('pill counts that didn’t match are listed, newest first, with the difference', () => {
+  const m = med({ supply: { onHand: 20, counts: [
+    { at: at(9), expected: 20, counted: 18 },
+    { at: at(8), expected: 30, counted: 30 },
+    { at: at(10), expected: 18, counted: 19 },
+  ] } });
+  assert.deepStrictEqual(countMismatches(m).map((c) => c.diff), [1, -2]);
+  assert.strictEqual(formatCountDiff(-2), '2 short');
+  assert.strictEqual(formatCountDiff(1), '1 extra');
+  assert.deepStrictEqual(countMismatches(med()), []);
 });

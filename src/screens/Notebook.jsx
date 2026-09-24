@@ -22,7 +22,8 @@ export default function Notebook() {
   const { rxNotes, crashMeds, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin } = useApp();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [openId, setOpenId] = useState(null);
+  // `?open=<id>` lands straight in a note, for the dose card's “add a note”.
+  const [openId, setOpenId] = useState(() => params.get('open'));
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const filter = params.get('kind');

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, Share2, Copy, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mergeWater } from '../lib/water.js';
+import { dosesCSV, effectsCSV, fullBackup, exportName } from '../lib/export.js';
+import { CLOUD_FIELDS } from '../utils/storage';
 import { mergeKit, DEFAULT_WARNING_SIGNS } from '../lib/kit.js';
 import { BRAKE_VARIANTS, buildBrakeMessage, buildAgreement, smsHref } from '../lib/message.js';
 import { suggestedOnset, formatHours } from '../lib/window.js';
@@ -18,10 +20,11 @@ import InstallCard from '../components/InstallCard.jsx';
  * are edited on their own pages, under the Meds tab.
  */
 export default function SettingsView() {
+  const app = useApp();
   const {
     crashKit, updateCrashKit, settings, notifPrefs, persistNotifPrefs,
     crashSessions, crashDoses,
-  } = useApp();
+  } = app;
   const kit = mergeKit(crashKit);
   const navigate = useNavigate();
   const [newSign, setNewSign] = useState('');
@@ -223,6 +226,38 @@ export default function SettingsView() {
         )}
       </div>
 
+      <div style={section}>
+        <h2 style={h2}>FOR MY DOCTOR, AND MY DATA</h2>
+        <button onClick={() => navigate('/report')} className="app-btn-primary" style={{ width: '100%', marginBottom: '0.625rem' }}>
+          Doctor visit report
+        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          <DownloadButton
+            label="Doses (spreadsheet)"
+            name={exportName('doses', 'csv')}
+            type="text/csv"
+            build={() => dosesCSV(app.crashMeds, app.crashDoses)}
+          />
+          <DownloadButton
+            label="Check-ins (spreadsheet)"
+            name={exportName('check-ins', 'csv')}
+            type="text/csv"
+            build={() => effectsCSV(app.crashMeds, app.rxEffects)}
+          />
+        </div>
+        <div style={{ marginTop: '0.5rem' }}>
+          <DownloadButton
+            label="Full backup — everything"
+            name={exportName('backup', 'json')}
+            type="application/json"
+            build={() => fullBackup(app, Object.keys(CLOUD_FIELDS))}
+          />
+        </div>
+        <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', lineHeight: 1.5, marginTop: '0.625rem' }}>
+          Saved to this device only — nothing is sent anywhere. The spreadsheets open in Numbers, Excel or Google Sheets.
+        </p>
+      </div>
+
       <WaterSettings
         water={mergeWater(kit.water)}
         onChange={(patch) => {
@@ -333,6 +368,12 @@ export default function SettingsView() {
             hint="Every interval after your first dose, until the goal or the cutoff. Tap “Drank one” to log it from the lock screen."
           />
           <Toggle
+            checked={notifPrefs.crash?.effectCheckIn ?? true}
+            onChange={(v) => setCrashPref('effectCheckIn', v)}
+            label="“How’s it working?” check-ins"
+            hint="Ninety minutes after a dose, and again as it wears off. A few taps; they build your effect curve."
+          />
+          <Toggle
             checked={notifPrefs.crash?.supplyGap ?? true}
             onChange={(v) => setCrashPref('supplyGap', v)}
             label="If I’ll run out before my refill date"
@@ -360,6 +401,35 @@ export default function SettingsView() {
         somewhere darker than a crash, that’s a person to call, not an app.
       </p>
     </div>
+  );
+}
+
+/**
+ * Hand a file to the browser. The text is built only on tap, so a big history
+ * costs nothing until it's asked for.
+ */
+function DownloadButton({ label, name, type, build }) {
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([build()], { type: `${type};charset=utf-8` }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <button
+      onClick={download}
+      style={{
+        width: '100%', padding: '0.75rem', borderRadius: '0.75rem', cursor: 'pointer',
+        backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+        color: 'var(--text)', fontSize: '0.8125rem', fontWeight: 700,
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

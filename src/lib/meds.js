@@ -75,6 +75,9 @@ export const DEFAULT_MED = {
     days: EVERY_DAY,
   },
   graceMinutes: DEFAULT_GRACE_MINUTES,
+  // Typed in from the label or the pharmacist, never filled in by the app.
+  // Shown on the dose card; nothing is calculated from it.
+  halfLifeHours: null,
   onsetHours: DEFAULT_ONSET_HOURS,
   durationHours: DEFAULT_DURATION_HOURS,
   supply: { onHand: null, lowDays: DEFAULT_LOW_DAYS, refillFrom: '', lastFilledAt: null },
@@ -229,6 +232,7 @@ export function normalizeMed(med = {}) {
     graceMinutes: nonNegative(med.graceMinutes, DEFAULT_GRACE_MINUTES),
     onsetHours: positive(med.onsetHours, DEFAULT_ONSET_HOURS),
     durationHours: positive(med.durationHours, DEFAULT_DURATION_HOURS),
+    halfLifeHours: positive(med.halfLifeHours, null),
     rules: Array.isArray(med.rules) ? med.rules : [],
   };
 }
@@ -404,6 +408,7 @@ export function expectedDosesOnDay(meds, doses, dayTs, now = Date.now()) {
       expectedAt: resolveTime(med, t, 0),
     }));
     const { bySlot } = matchEntriesToSlots(slots, entriesForMedOnDay(med.id, doses, dayTs));
+    chainSlots(med, slots, bySlot);
 
     for (const slot of slots) {
       const entry = bySlot.get(slot.id) || null;
@@ -440,6 +445,58 @@ export function expectedDosesOnDay(meds, doses, dayTs, now = Date.now()) {
   }
 
   return out.sort((a, b) => (a.expectedAt ?? Infinity) - (b.expectedAt ?? Infinity));
+}
+
+// How close a schedule's gaps have to be to the wear-off time to count as
+// "every time it wears off" when the medication hasn't said either way.
+const SPACING_MATCH_MS = 30 * MINUTE_MS;
+
+/**
+ * How a medication's later doses are timed.
+ *
+ * 'clock' — each at its own set time. 'wearOff' — each one when the one before
+ * it wears off: taken at 8:16 with a four-hour wear-off, the next is 12:16.
+ *
+ * A medication that hasn't chosen is read from its own schedule: several
+ * clock times already spaced by its wear-off (4:30, 8:30, 12:30 at four
+ * hours) is someone dosing "when it wears off", so that's what it gets —
+ * without a setting to find first. Anything spaced differently keeps its
+ * clock times.
+ */
+export function doseSpacing(med) {
+  const m = normalizeMed(med);
+  if (m.spacing === 'clock' || m.spacing === 'wearOff') return m.spacing;
+  const times = m.schedule.times;
+  if (times.length < 2 || times.some((t) => t.mode !== 'clock')) return 'clock';
+  const ref = new Date(2026, 0, 5, 12).getTime();
+  const at = times.map((t) => atClock(ref, t.time));
+  if (at.some((x) => x == null)) return 'clock';
+  const gap = m.onsetHours * HOUR_MS;
+  for (let i = 1; i < at.length; i += 1) {
+    if (Math.abs(at[i] - at[i - 1] - gap) > SPACING_MATCH_MS) return 'clock';
+  }
+  return 'wearOff';
+}
+
+/**
+ * Re-time a 'wearOff' medication's later clock slots off the one before:
+ * that slot's actual taken time when it was taken, its own expected time
+ * otherwise. The first slot keeps its clock time. Runs after entries are
+ * matched to slots, so an unslotted dose is still filed by the set times.
+ */
+function chainSlots(med, slots, bySlot) {
+  if (doseSpacing(med) !== 'wearOff') return;
+  const gap = med.onsetHours * HOUR_MS;
+  for (let i = 1; i < slots.length; i += 1) {
+    const slot = slots[i];
+    if (slot.mode !== 'clock') continue;
+    const prev = slots[i - 1];
+    const prevEntry = bySlot.get(prev.id);
+    const base = prevEntry && prevEntry.status !== 'skipped' && typeof prevEntry.takenAt === 'number'
+      ? prevEntry.takenAt
+      : prev.expectedAt;
+    if (base != null) slot.expectedAt = base + gap;
+  }
 }
 
 /** Today's doses — `expectedDosesOnDay` for the day `now` falls in. */
@@ -538,6 +595,30 @@ export function effectiveWindow(meds, doses, kit = {}, now = Date.now()) {
     pendingSlotId: pending ? pending.slotId : null,
     pendingExpectedAt: pending ? pending.expectedAt : null,
   };
+}
+
+/**
+ * When this dose wears off: the time it was taken plus the medication's own
+ * "hours until it wears off" — the same number the evening window starts
+ * from. For a dose not taken yet it's where it would land if taken on time,
+ * marked `projected`, so the card can say "if taken on time" rather than
+ * implying it already happened. Null for a skip, or with no time to go on.
+ */
+export function wearOffFor(entry) {
+  if (!entry || entry.state === 'skipped-on-purpose') return null;
+  const onset = positive(entry.med?.onsetHours, DEFAULT_ONSET_HOURS) * HOUR_MS;
+  if (entry.dose && typeof entry.dose.takenAt === 'number') {
+    return { at: entry.dose.takenAt + onset, projected: false };
+  }
+  if (entry.state === 'skipped' || entry.expectedAt == null) return null;
+  return { at: entry.expectedAt + onset, projected: true };
+}
+
+/** "10h" / "4.5h" — a half-life, as typed. */
+export function formatHalfLife(hours) {
+  const n = Number(hours);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${Math.round(n * 10) / 10}h`;
 }
 
 // ── Rules ───────────────────────────────────────────────────────────────────
@@ -655,6 +736,26 @@ export function supplyStatus(med, now = Date.now(), doses = null) {
     refillFrom: s.refillFrom || '', refillAt, refillOpen, daysUntilRefill,
     ...gap,
   };
+}
+
+/**
+ * Pill counts that didn't match what the log expected, newest first.
+ * `diff` is counted − expected: negative is pills missing, positive is extra
+ * (usually a dose logged that wasn't actually taken).
+ */
+export function countMismatches(med) {
+  const counts = normalizeMed(med).supply.counts;
+  if (!Array.isArray(counts)) return [];
+  return counts
+    .filter((c) => c && typeof c.at === 'number' && c.expected != null && Number(c.counted) !== Number(c.expected))
+    .map((c) => ({ ...c, diff: Number(c.counted) - Number(c.expected) }))
+    .sort((a, b) => b.at - a.at);
+}
+
+/** "2 short" / "1 extra" — a count difference in words. */
+export function formatCountDiff(diff) {
+  const n = Math.abs(Number(diff) || 0);
+  return diff < 0 ? `${n} short` : `${n} extra`;
 }
 
 /** The local midnight `n` days after the one containing `ts`, safe across a clock change. */

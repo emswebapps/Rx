@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Check, Clock, AlertTriangle, X, SkipForward, Info, Undo2 } from 'lucide-react';
+import { Check, Clock, AlertTriangle, X, SkipForward, Info, Undo2, NotebookPen } from 'lucide-react';
 import Modal from './Modal';
 import Sheet from './Sheet';
 import { formatClock } from '../lib/time.js';
-import { rulesForMed, supplyStatus, formatOffset, formatAmount } from '../lib/meds.js';
+import {
+  rulesForMed, supplyStatus, formatOffset, formatAmount, wearOffFor, formatHalfLife,
+} from '../lib/meds.js';
 
 /**
  * One dose on Today: a pill, a name, and how much to take.
@@ -62,58 +64,182 @@ export function PillIcon({ state, size = 44 }) {
   );
 }
 
-export default function ScheduleRow({ entry, onOpen, now = Date.now() }) {
+export default function ScheduleRow({ entry, onOpen, onNotes, noteCount = 0, now = Date.now() }) {
   const { med, state, amount } = entry;
   const supply = supplyStatus(med, now);
   const status = statusText(entry);
   const tone = STATUS[state] || STATUS.unknown;
+  const wear = wearOffFor(entry);
+  const halfLife = formatHalfLife(med.halfLifeHours);
+
+  // The small print: when this one wears off and the half-life, both the
+  // user's own numbers. Past tense once the time has gone by.
+  const facts = [
+    wear && (wear.projected
+      ? `Wears off ~${formatClock(wear.at)} if on time`
+      : `${wear.at <= now ? 'Wore' : 'Wears'} off ${formatClock(wear.at)}`),
+    halfLife && `Half-life ${halfLife}`,
+  ].filter(Boolean);
 
   return (
-    <button
-      onClick={() => onOpen(entry)}
-      aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
-      style={{
-        width: '100%', textAlign: 'left', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: '1rem',
-        padding: '1.125rem 1.25rem', borderRadius: '1rem',
-        backgroundColor: 'var(--surface)',
-        border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--surface)'}`,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      <PillIcon state={state} />
-      <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.25rem 0' }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontSize: '1.1875rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
-        }}>
-          {med.name || 'Untitled'}
-        </p>
-        <p style={{ fontSize: '1rem', color: 'var(--subtle)', marginTop: '0.25rem', lineHeight: 1.35 }}>
-          {doseInstruction(med, amount)}
-        </p>
-        {status && (
-          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: tone.color, marginTop: '0.25rem' }}>
-            {status}
-          </p>
-        )}
-        {supply.low && supply.tracked && state !== 'taken' && (
+    <div style={{
+      position: 'relative', borderRadius: '1rem',
+      backgroundColor: 'var(--surface)',
+      border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--surface)'}`,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+    }}>
+      <button
+        onClick={() => onOpen(entry)}
+        aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
+        style={{
+          width: '100%', textAlign: 'left', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '1rem',
+          // Room on the right for the notes button, which sits over the card
+          // rather than inside this one — a button can't hold a button.
+          padding: `1.125rem ${onNotes ? '3.75rem' : '1.25rem'} 1.125rem 1.25rem`,
+          background: 'none', border: 'none', borderRadius: '1rem',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <PillIcon state={state} />
+        <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.25rem 0' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            display: 'flex', alignItems: 'center', gap: '0.3125rem', marginTop: '0.375rem',
-            fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600,
+            fontSize: '1.1875rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
           }}>
-            <AlertTriangle size={13} style={{ flexShrink: 0 }} />
-            {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
-            {supply.refillOpen ? ' — refill now' : ''}
+            {med.name || 'Untitled'}
           </p>
-        )}
-      </div>
-    </button>
+          <p style={{ fontSize: '1rem', color: 'var(--subtle)', marginTop: '0.25rem', lineHeight: 1.35 }}>
+            {doseInstruction(med, amount)}
+          </p>
+          {status && (
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: tone.color, marginTop: '0.25rem' }}>
+              {status}
+            </p>
+          )}
+          {facts.length > 0 && (
+            <p style={{
+              fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.3125rem', lineHeight: 1.35,
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {facts.join(' · ')}
+            </p>
+          )}
+          {supply.low && supply.tracked && state !== 'taken' && (
+            <p style={{
+              display: 'flex', alignItems: 'center', gap: '0.3125rem', marginTop: '0.375rem',
+              fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600,
+            }}>
+              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+              {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
+              {supply.refillOpen ? ' — refill now' : ''}
+            </p>
+          )}
+        </div>
+      </button>
+
+      {onNotes && (
+        <button
+          onClick={() => onNotes(med)}
+          aria-label={`Notes for ${med.name || 'this medication'}${noteCount ? ` (${noteCount})` : ''}`}
+          style={{
+            position: 'absolute', top: '50%', right: '0.75rem', transform: 'translateY(-50%)',
+            width: '2.5rem', height: '2.5rem', borderRadius: '9999px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'var(--surface2)', border: 'none',
+            color: noteCount ? 'var(--accent-text)' : 'var(--muted)',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <NotebookPen size={18} />
+          {noteCount > 0 && (
+            <span style={{
+              position: 'absolute', top: -2, right: -2, minWidth: '1.125rem', height: '1.125rem',
+              padding: '0 0.25rem', borderRadius: '9999px', backgroundColor: 'var(--accent)',
+              color: '#fff', fontSize: '0.6875rem', fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {noteCount}
+            </span>
+          )}
+        </button>
+      )}
+    </div>
   );
 }
+
+/**
+ * Everything written down about one medication, one tap from its dose: the
+ * rules pinned to the dose ("eat 30 min before") and the notes tied to it in
+ * What I've noticed. Read-only here — writing happens where it always has, and
+ * "Add a note" lands straight in a fresh one already tied to this medication.
+ */
+export function MedNotesSheet({ med, notes, onClose, onAdd, onOpenNote, onEditRules }) {
+  const rules = rulesForMed(med);
+  return (
+    <Sheet onClose={onClose} label={`Notes for ${med.name || 'this medication'}`}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', marginBottom: '1rem' }}>
+        {med.name || 'Untitled'} — my notes
+      </h2>
+
+      {rules.length > 0 && (
+        <div style={{ marginBottom: '1rem' }}>
+          <p style={sheetHeading}>RULES FOR THIS DOSE</p>
+          <div style={{ display: 'grid', gap: '0.375rem' }}>
+            {rules.map((r) => (
+              <p key={r.id} style={{ fontSize: '0.9375rem', color: 'var(--muted)', lineHeight: 1.45 }}>
+                <strong style={{ color: 'var(--text)' }}>{formatOffset(r.offsetMinutes)}</strong> — {r.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p style={sheetHeading}>WHAT I’VE NOTICED</p>
+      {notes.length === 0 ? (
+        <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', lineHeight: 1.5 }}>
+          Nothing written about this one yet.
+        </p>
+      ) : (
+        <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '45vh', overflowY: 'auto' }}>
+          {notes.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => onOpenNote(n)}
+              style={{
+                textAlign: 'left', padding: '0.75rem', borderRadius: '0.75rem', cursor: 'pointer',
+                backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+                fontSize: '0.9375rem', color: 'var(--text)', lineHeight: 1.45, whiteSpace: 'pre-wrap',
+              }}
+            >
+              {n.text}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+        <button onClick={onAdd} className="app-btn-primary" style={{ flex: 1 }}>Add a note</button>
+        <button
+          onClick={onEditRules}
+          style={{
+            flex: 1, padding: '0.75rem', borderRadius: '0.75rem', cursor: 'pointer',
+            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '0.875rem', fontWeight: 700,
+          }}
+        >
+          Edit rules
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+const sheetHeading = {
+  fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--muted)', marginBottom: '0.5rem',
+};
 
 /**
  * What you can do with one dose.
@@ -121,13 +247,17 @@ export default function ScheduleRow({ entry, onOpen, now = Date.now() }) {
  * `when` says which day the sheet is for. A day still to come can't be logged —
  * there is nothing to record yet — so it offers only the medication itself.
  */
-export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed }) {
+export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn }) {
   const { med, state, expectedAt, amount, dose, entry: logged } = entry;
   const rules = rulesForMed(med);
   const status = statusText(entry);
   const tone = STATUS[state] || STATUS.unknown;
   const future = when === 'future';
   const settled = state === 'taken' || state === 'skipped-on-purpose';
+  // Take asks when, rather than stamping the moment the button was pressed —
+  // the dose was often swallowed a few minutes before the phone came out, and
+  // with "next dose when this wears off" that difference moves the whole day.
+  const [picking, setPicking] = useState(false);
 
   return (
     <Sheet onClose={onClose} label={med.name || 'Dose'}>
@@ -183,12 +313,20 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         </p>
       ) : null}
 
+      {picking ? (
+        <TakeTimePicker
+          today={when === 'today'}
+          fallback={expectedAt}
+          onCancel={() => setPicking(false)}
+          onConfirm={(at) => onTake(entry, at)}
+        />
+      ) : (
       <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1.5rem' }}>
         {!future && !settled && (
           <RoundAction Icon={SkipForward} label="Skip" onClick={() => onSkip(entry)} />
         )}
         {!future && !settled && (
-          <RoundAction Icon={Check} label="Take" primary onClick={() => onTake(entry)} />
+          <RoundAction Icon={Check} label="Take" primary onClick={() => setPicking(true)} />
         )}
         {state === 'taken' && dose && (
           <RoundAction Icon={Clock} label="Change time" onClick={() => onChangeTime(dose)} />
@@ -198,7 +336,93 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         )}
         <RoundAction Icon={Info} label="Medication" onClick={() => onOpenMed(med.id)} />
       </div>
+      )}
+
+      {!picking && onCheckIn && state === 'taken' && (
+        <button
+          onClick={() => onCheckIn(med.id)}
+          style={{
+            display: 'block', margin: '1.25rem auto 0', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.9375rem', fontWeight: 700, color: 'var(--accent-text)',
+          }}
+        >
+          How’s it working? Check in
+        </button>
+      )}
     </Sheet>
+  );
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const hhmm = (ts) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+
+/**
+ * "What time did you take it?" — now, a few minutes ago, or any time.
+ *
+ * On today it starts at now; on a past day at the time it was due, since the
+ * point there is filling in a day already gone. A time later than now on
+ * today means this morning, not tonight — the same rule as TimeEditor.
+ */
+function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
+  const start = today ? Date.now() : (fallback ?? Date.now());
+  const [value, setValue] = useState(hhmm(start));
+
+  const resolve = () => {
+    const [h, m] = value.split(':').map(Number);
+    const d = new Date(start);
+    if (!Number.isNaN(h) && !Number.isNaN(m)) d.setHours(h, m, 0, 0);
+    if (today && d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  };
+  const ago = (min) => setValue(hhmm(Date.now() - min * 60 * 1000));
+
+  return (
+    <div style={{ marginTop: '1.25rem' }}>
+      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.625rem' }}>
+        What time did you take it?
+      </p>
+      <input
+        type="time"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="app-input"
+        style={{ width: '100%', fontSize: '1.375rem', fontWeight: 700, textAlign: 'center' }}
+        aria-label="Time taken"
+      />
+      {today && (
+        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.625rem' }}>
+          {[['Now', 0], ['5 min ago', 5], ['15 min ago', 15], ['30 min ago', 30]].map(([label, min]) => (
+            <button
+              key={label}
+              onClick={() => ago(min)}
+              style={{
+                flex: 1, padding: '0.5rem 0.25rem', borderRadius: '0.625rem', cursor: 'pointer',
+                backgroundColor: value === hhmm(Date.now() - min * 60 * 1000) ? 'var(--accent-soft)' : 'var(--surface2)',
+                border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8125rem', fontWeight: 700,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '0.875rem 1.125rem', borderRadius: '0.75rem', cursor: 'pointer',
+            backgroundColor: 'var(--surface2)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '0.9375rem', fontWeight: 700,
+          }}
+        >
+          Back
+        </button>
+        <button onClick={() => onConfirm(resolve())} className="app-btn-primary" style={{ flex: 1, fontSize: '1rem' }}>
+          <Check size={17} style={{ verticalAlign: '-3px', marginRight: '0.375rem' }} />
+          Log it
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -269,6 +269,26 @@ function collectCrashMessages(data, sent, now, tz) {
     }
   }
 
+  // ── How's it working? ──
+  // Ninety minutes after a dose, and again at its wear-off hours — see
+  // checkInsDue in src/lib/effects.js. Open for an hour, once per dose and
+  // phase, and not at all once answered (or dismissed) in the app.
+  if (tracking && prefs.effectCheckIn !== false) {
+    const effects = Array.isArray(data.rxEffects) ? data.rxEffects : [];
+    const answered = new Set(effects.filter(Boolean).map((e) => `${e.doseId}:${e.phase}`));
+    const byId = new Map(regimen.activeMeds(meds).map((m) => [m.id, m]));
+    for (const d of regimen.takenDoses(doses)) {
+      const med = d.medId ? byId.get(d.medId) : null;
+      if (!med || now - d.takenAt > 24 * CRASH_HOUR_MS) continue;
+      const phases = [['working', 90 * 60 * 1000], ['wearing', med.onsetHours * CRASH_HOUR_MS]];
+      for (const [phase, after] of phases) {
+        const at = d.takenAt + after;
+        if (now < at || now - at > CRASH_HOUR_MS || answered.has(`${d.id}:${phase}`)) continue;
+        push(`rx-effect-${d.id}-${phase}`, 'Quick check-in', 'How’s it working? A few taps.');
+      }
+    }
+  }
+
   // ── Water ──
   // Every interval after the first dose, until the goal or the cutoff. The tag
   // moves on with each glass and each missed interval, so an ignored reminder

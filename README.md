@@ -82,6 +82,46 @@ you'd go without. A push goes out as soon as it becomes true, and again three
 days before you run out if it still is (the `supplyGap` switch in Settings).
 Like every Rx notification, it doesn't name the medication.
 
+### Logging the real time, and doses that follow wear-off
+
+**Take** asks what time it was taken: now, 5/15/30 minutes ago, or any time.
+A medication's later doses can be timed **"when the last one wears off"**:
+taken at 8:16 with a four-hour wear-off, the next is due at 12:16, and a late
+dose pushes the rest of the day along. A medication that hasn't chosen is read
+from its own schedule. Clock times already spaced by its wear-off hours get
+this automatically (`doseSpacing`/`chainSlots` in `meds.js`, ported to
+`functions/regimen.js` and pinned by the regimen fixture).
+
+### How's it working?
+
+Ninety minutes after a dose, and again at its wear-off time, Today shows a
+check-in card (a push too, switch `effectCheckIn`):
+- focus, mood and appetite on a 1–5 scale
+- side-effect chips
+
+History → Effects turns these into your own curve, e.g. *"peaks about 1h 45m,
+focus drops by about 4h 15m"*. It points out when that disagrees with the
+wear-off hours you typed. The logic is `src/lib/effects.js`, and check-ins are
+stored as `rxEffects`.
+
+### For the doctor, and your data
+
+- **`/report`** is one printable page (Print / Save as PDF). It covers the
+  last 30 days:
+  - medications and schedule
+  - adherence and compliance
+  - wear-off, both typed and learned
+  - side effects
+  - pill-count mismatches
+  - pinned notes
+
+  Crash sessions are left out unless switched on.
+- **Count check** on Supply: enter what's physically in the bottle. A
+  mismatch is recorded (`supply.counts`), shown on the card and in the
+  report, and you choose whose number wins.
+- **Download my data** in Settings gives a doses CSV, a check-ins CSV and a
+  full JSON backup (`src/lib/export.js`). Nothing is uploaded anywhere.
+
 ### The routine around a dose
 
 Some medication only works when it's taken the same way every time: *eat three

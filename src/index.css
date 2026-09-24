@@ -280,3 +280,14 @@ html.light {
   /* Progress bars bg */
   & .bg-slate-700.rounded-full { background-color: var(--border) !important; }
 }
+
+/* The doctor report prints on white, without the tab bar or its buttons.
+   Colours are forced rather than re-themed: the dark-mode tokens are set by
+   more specific selectors than a print block can reliably out-rank. */
+@media print {
+  html, body { background: #fff !important; }
+  nav, .no-print { display: none !important; }
+  .report { padding: 0 !important; }
+  .report, .report * { color: #111 !important; background: transparent !important; }
+  .report h2 { color: #444 !important; border-color: #999 !important; }
+}
