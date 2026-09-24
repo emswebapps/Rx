@@ -10,6 +10,7 @@ import { useNow } from '../lib/useCountdown.js';
 import { expectedDosesToday, normalizeMed } from '../lib/meds.js';
 import { nextWaitEnd, waitTag, dayKey, routinesForDay, runId } from '../lib/routine.js';
 import { nextWaterDue, waterReminderTag } from '../lib/water.js';
+import { mealsForDay, nextMealDue, mealTag } from '../lib/mealPlan.js';
 import { suggestedOnsetForMed } from '../lib/window.js';
 
 import RxHome from './Today.jsx';
@@ -141,8 +142,8 @@ function RunnerRoute({ active }) {
 }
 
 /**
- * The routine's waits and the water reminders, to the second while the app is
- * open.
+ * The routine's waits, the water reminders and the meal times, to the second
+ * while the app is open.
  *
  * The scheduler covers the app being closed, but it only looks every few
  * minutes; a thirty-minute wait that buzzes at thirty-four is the kind of
@@ -154,9 +155,9 @@ function RunnerRoute({ active }) {
  */
 function DailyReminders() {
   const {
-    crashMeds, crashDoses, crashKit, notifPrefs, rxRoutineRuns, rxWater, rxClientSent, markClientSent,
+    crashMeds, crashDoses, crashKit, notifPrefs, rxRoutineRuns, rxWater, rxClientSent, markClientSent, rxEaten,
   } = useApp();
-  const now = useNow({ tick: 60_000, syncKey: `${rxRoutineRuns.length}:${rxWater.length}:${crashDoses.length}` });
+  const now = useNow({ tick: 60_000, syncKey: `${rxRoutineRuns.length}:${rxWater.length}:${crashDoses.length}:${rxEaten.length}` });
   const kit = mergeKit(crashKit);
   const prefs = notifPrefs.crash || {};
   const tracking = kit.doseTracking !== false;
@@ -228,6 +229,25 @@ function DailyReminders() {
     }, Math.max(0, waterDue - Date.now()));
     return () => clearTimeout(id);
   }, [waterDue, rxWater.length]);
+
+  // The next meal on the meal times, once its time is firm (not hanging off a
+  // dose still to come). Armed for the moment it comes due.
+  const mealsOn = tracking && prefs.mealTime !== false;
+  const meal = mealsOn
+    ? nextMealDue(mealsForDay({
+      plan: kit.mealPlan, eaten: rxEaten, runs: rxRoutineRuns, meds: crashMeds, doses: crashDoses, kit, dayTs: now, now,
+    }))
+    : null;
+  const mealKey = meal ? mealTag(dayKey(meal.dueAt), meal.id) : null;
+
+  useEffect(() => {
+    if (!meal || rxClientSent[mealKey]) return undefined;
+    const id = setTimeout(() => {
+      sendNotification('Time to eat', { body: 'Your next meal is up. Tap to log it.', tag: mealKey, data: { url: '/Rx/' } });
+      markClientSent(mealKey);
+    }, Math.max(0, meal.dueAt - Date.now()));
+    return () => clearTimeout(id);
+  }, [mealKey, meal?.dueAt, rxClientSent[mealKey]]);
 
   return null;
 }

@@ -20,12 +20,12 @@ test('fields with commas, quotes or newlines are quoted', () => {
 
 test('doses come out one row each, oldest first, with timing', () => {
   const csv = dosesCSV([IR], [
-    { id: 'late', medId: 'ir', takenAt: at(10), status: 'taken', amount: 1 },
+    { id: 'late', medId: 'ir', takenAt: at(10), status: 'taken', amount: 1, kickedInAt: at(10, 25), droppedAt: at(13, 40) },
     { id: 'skip', medId: 'ir', takenAt: at(9) - 24 * 3600e3, status: 'skipped' },
   ]).split('\r\n');
-  assert.strictEqual(csv[0], 'date,time,medication,strength,amount,status,timing,logged from');
-  assert.match(csv[1], /^2026-09-23,09:00,Adderall IR,20 mg,,skipped,,app$/);
-  assert.match(csv[2], /^2026-09-24,10:00,Adderall IR,20 mg,1,taken,late,app$/);
+  assert.strictEqual(csv[0], 'date,time,medication,strength,amount,status,timing,logged from,kicked in (min),dropped off (min)');
+  assert.match(csv[1], /^2026-09-23,09:00,Adderall IR,20 mg,,skipped,,app,,$/);
+  assert.match(csv[2], /^2026-09-24,10:00,Adderall IR,20 mg,1,taken,late,app,25,220$/);
 });
 
 test('check-ins come out with side effects named; dismissed prompts are left out', () => {

@@ -189,7 +189,53 @@ Settings → My meals (`/meals`) keeps two lists the user builds: meals that
 - Meals already eaten before doses are offered on the page for quick
   approval.
 
+- Each saved meal can carry **grams of protein**. Today adds up the day's
+  protein from everything ticked as eaten: routine meals and meal times. A
+  meal made of saved parts ("Ranch pouch + crackers + jerky stick") is summed
+  from them, but only if every part has a number. Otherwise it's shown as
+  *not counted* rather than guessed.
+
 The logic is `src/lib/mealLibrary.js`, stored as `rxMeals`.
+
+### Meal times
+
+Some meals aren't tied to a dose: lunch three and a half hours after
+breakfast, or dinner as the last dose wears off. My meals → **Meal times**
+holds a list of them. Each one is timed from one of four things:
+
+| Timing | Counts from |
+|---|---|
+| After I last ate | the last meal ticked today, from a routine or this list (the first dose if nothing's been eaten yet) |
+| After my first dose | the first dose logged today |
+| When my last dose wears off | the start of the evening window |
+| At a set time | the clock |
+
+Like a routine's wait, the time follows what actually happened, so a late
+breakfast moves lunch. A meal timed off wear-off is an *estimate* while a
+dose is still to come. Today says so ("if your next dose is on time") and it
+never buzzes until that dose is in.
+
+On Today, a meal that has come due takes the top card (**Time to eat ·
+Lunch**, one tap *Ate it*). The Meals card lists the day's meals with their
+times, and a tap on one offers *Had something else?*, *Skip* and undo. The
+buzz is the `mealTime` switch: to the minute from the open app, within five
+minutes from the scheduler. It says only "Time to eat", never the meal or
+the food. The times are `kit.mealPlan`. What was eaten is `rxEaten`, one
+entry per meal per day. The logic is `src/lib/mealPlan.js`, and the
+scheduler's copy of `dueMealTags` is in `functions/daily.js`, held to the
+daily fixture.
+
+### Kicked in, dropped off
+
+After a dose, Today shows one line: **Felt it kick in?**, then **Feel it
+dropping off?**. Each is one tap at the moment it's felt. The times are
+stored on the dose itself (`kickedInAt`, `droppedAt`).
+
+History → Effects lists each dose's minutes and puts them side by side by
+what was eaten with the dose, using the middle value per meal. That
+comparison answers "did eating with it change how fast it landed, or how long
+it held?" The doses CSV carries both numbers. The logic is
+`src/lib/onset.js`.
 
 ### Water
 
@@ -296,6 +342,8 @@ src/
                 stats.js      crash session history
                 notes.js      free-text observations, pinning, filtering
                 routine.js    the steps around a dose, and their waits
+                mealPlan.js   meals with their own time, and what was eaten
+                onset.js      kicked in / dropped off, by meal
                 water.js      glasses, goal, when the next is due
                 compliance.js the daily 0–100 score
   screens/      one file per page, plus screens/crash/ for the protocol

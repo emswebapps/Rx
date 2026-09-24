@@ -42,6 +42,7 @@ export default function MealChips({ onPick, selected = '', max = 12 }) {
           >
             {on && <Check size={12} strokeWidth={3} />}
             {m.name}
+            {m.protein != null && <span style={{ fontWeight: 400, color: 'var(--subtle)' }}>· {m.protein} g</span>}
           </button>
         );
       })}

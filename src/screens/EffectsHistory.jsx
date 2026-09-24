@@ -7,6 +7,7 @@ import { formatHours } from '../lib/window.js';
 import { formatClock, formatDayRelative } from '../lib/time.js';
 import { Segmented } from '../components/medsUi.jsx';
 import { mealLog, focusByFood } from '../lib/meals.js';
+import { doseTimings, timingByFood, formatMinutes } from '../lib/onset.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -87,6 +88,8 @@ export default function EffectsHistory() {
         )}
       </div>
 
+      <OnsetSection rows={doseTimings(crashMeds, crashDoses, rxRoutineRuns).filter((r) => r.medId === med.id)} />
+
       <MealsSection rows={mealLog(crashMeds, crashDoses, rxRoutineRuns, rxEffects).filter((r) => r.medId === med.id)} />
 
       <p style={{ ...heading, marginTop: '1.5rem' }}>SIDE EFFECTS · LAST 30 DAYS</p>
@@ -140,6 +143,64 @@ export default function EffectsHistory() {
 }
 
 /**
+ * When each dose kicked in and dropped off, from the two taps on Today, and
+ * the same side by side by what was eaten with it. Middle values, so one odd
+ * morning doesn't swing the comparison.
+ */
+function OnsetSection({ rows }) {
+  const byFood = timingByFood(rows);
+  return (
+    <>
+      <p style={{ ...heading, marginTop: '1.5rem' }}>KICKED IN · DROPPED OFF</p>
+      {rows.length === 0 ? (
+        <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', lineHeight: 1.5 }}>
+          After a dose, Today asks “Felt it kick in?” and then “Feel it dropping off?”. One tap each, at the
+          moment you feel it, and the minutes show up here.
+        </p>
+      ) : (
+        <>
+          <div className="app-card" style={{ padding: '0.75rem 1rem', marginBottom: '0.625rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>
+              <span style={{ flex: 1 }}>Eaten with the dose</span>
+              <span style={{ width: '4.5rem', textAlign: 'right' }}>Kicked in</span>
+              <span style={{ width: '4.5rem', textAlign: 'right' }}>Dropped off</span>
+            </div>
+            {byFood.map((f) => (
+              <div key={f.food || 'none'} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.875rem', padding: '0.125rem 0' }}>
+                <span style={{ flex: 1, minWidth: 0, color: f.food ? 'var(--text)' : 'var(--subtle)' }}>
+                  {f.food || 'No meal logged'}
+                  <span style={{ color: 'var(--subtle)', fontSize: '0.75rem' }}> · {f.n} {f.n === 1 ? 'dose' : 'doses'}</span>
+                </span>
+                <strong style={{ width: '4.5rem', textAlign: 'right', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatMinutes(f.kickMin)}</strong>
+                <strong style={{ width: '4.5rem', textAlign: 'right', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatMinutes(f.dropMin)}</strong>
+              </div>
+            ))}
+            <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.375rem' }}>
+              Both counted from when you took it. Middle value where there’s more than one.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gap: '0.375rem' }}>
+            {rows.slice(0, 14).map((r) => (
+              <div key={r.doseId} className="app-card" style={{ padding: '0.625rem 0.875rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text)', fontWeight: 600 }}>
+                  {r.kickMin != null ? `Kicked in after ${formatMinutes(r.kickMin)}` : 'Kick-in not tapped'}
+                  {r.dropMin != null ? ` · dropped off at ${formatMinutes(r.dropMin)}` : ''}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>
+                  {formatDayRelative(r.takenAt)} · taken {formatClock(r.takenAt)}
+                  {r.food ? ` · ${r.food}` : ' · no meal logged'}
+                  {r.foodGapMin != null && r.food ? ` (${r.foodGapMin >= 0 ? `${r.foodGapMin} min after` : `${-r.foodGapMin} min before`})` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/**
  * What you ate before this medication, and — where there's a check-in to go
  * on — how focused that dose left you. Just your own numbers side by side.
  */
@@ -148,7 +209,7 @@ function MealsSection({ rows }) {
   if (rows.length === 0) {
     return (
       <>
-        <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS BEFORE DOSES</p>
+        <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS WITH DOSES</p>
         <p style={{ fontSize: '0.875rem', color: 'var(--subtle)', lineHeight: 1.5 }}>
           Add a meal step to this medication’s routine (Meds → the dose time → Routine) and each one you tick off shows up here.
         </p>
@@ -157,7 +218,7 @@ function MealsSection({ rows }) {
   }
   return (
     <>
-      <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS BEFORE DOSES</p>
+      <p style={{ ...heading, marginTop: '1.5rem' }}>MEALS WITH DOSES</p>
       {byFood.length > 0 && (
         <div className="app-card" style={{ padding: '0.75rem 1rem', marginBottom: '0.625rem' }}>
           <p style={{ fontSize: '0.8125rem', color: 'var(--muted)', marginBottom: '0.375rem' }}>Average focus after each meal</p>
@@ -179,7 +240,9 @@ function MealsSection({ rows }) {
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: '0.125rem' }}>
               {formatDayRelative(r.ateAt)} {formatClock(r.ateAt)} · dose {r.doseNumber}
-              {r.minutesBefore != null ? ` taken ${r.minutesBefore} min later` : ' · no dose logged'}
+              {r.minutesBefore == null ? ' · no dose logged'
+                : r.minutesBefore >= 0 ? ` taken ${r.minutesBefore} min later`
+                  : ` taken ${-r.minutesBefore} min before`}
               {r.focus != null ? ` · focus ${r.focus}/5` : ''}
             </p>
           </div>

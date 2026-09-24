@@ -28,6 +28,7 @@ const KEYS = {
   CLIENT_SENT: 'rx_client_sent',
   EFFECTS: 'rx_effects',
   MEALS: 'rx_meals',
+  EATEN: 'rx_eaten',
 };
 
 function get(key) {
@@ -68,7 +69,7 @@ export const storage = {
       crash: {
         timerEnd: true, windowHeadsUp: true, escrowOpened: true, crashNote: true,
         doseDue: true, ruleReminders: true, refillLow: true,
-        routineWait: true, water: true, supplyGap: true, effectCheckIn: true,
+        routineWait: true, water: true, supplyGap: true, effectCheckIn: true, mealTime: true,
         // Off until asked for: a second buzz about a dose whose moment has
         // already passed is mostly guilt.
         doseLate: false,
@@ -104,6 +105,8 @@ export const storage = {
   setEffects: (v) => set(KEYS.EFFECTS, v),
   getMeals: () => get(KEYS.MEALS) || [],
   setMeals: (v) => set(KEYS.MEALS, v),
+  getEaten: () => get(KEYS.EATEN) || [],
+  setEaten: (v) => set(KEYS.EATEN, v),
 };
 
 // The Firestore field names, which are also the localStorage slices. One list,
@@ -131,4 +134,7 @@ export const CLOUD_FIELDS = {
   rxEffects: [storage.getEffects, storage.setEffects],
   // My meals: approved and avoided — see lib/mealLibrary.js.
   rxMeals: [storage.getMeals, storage.setMeals],
+  // The meal times, eaten or skipped, one entry per meal per day — see
+  // lib/mealPlan.js. The times themselves live on the kit, as `mealPlan`.
+  rxEaten: [storage.getEaten, storage.setEaten],
 };
