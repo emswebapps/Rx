@@ -19,7 +19,25 @@ jobs:
       - run: npm --prefix functions test
 
       - run: npm install -g firebase-tools
+
+      # Credentials: a service-account key (the FIREBASE_SERVICE_ACCOUNT secret,
+      # the whole JSON file pasted in) is preferred; a legacy FIREBASE_TOKEN
+      # from `firebase login:ci` still works. The key is written to the
+      # runner's temp dir and GOOGLE_APPLICATION_CREDENTIALS is only set when
+      # it exists — pointing it at a missing file fails the deploy on its own.
+      - name: Set up Firebase credentials
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -n "$SERVICE_ACCOUNT" ]; then
+            printf '%s' "$SERVICE_ACCOUNT" > "$RUNNER_TEMP/key.json"
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/key.json" >> "$GITHUB_ENV"
+          elif [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::No Firebase credentials. Add a FIREBASE_SERVICE_ACCOUNT secret (a service-account JSON key with the Firebase Admin / Cloud Functions Admin roles) under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - run: firebase deploy --only functions:rx --project billtracker-256ef --non-interactive
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/key.json
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
