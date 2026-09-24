@@ -2456,6 +2456,283 @@
       }
     },
     {
+      "name": "every three days: due on the third day from the start, with supply counted in those days",
+      "now": 1788004800000,
+      "nowLocal": "2026-08-29, 08:00",
+      "meds": [
+        {
+          "id": "e3",
+          "name": "Every third day",
+          "form": "capsule",
+          "schedule": {
+            "times": [
+              {
+                "id": "d",
+                "mode": "clock",
+                "time": "09:00",
+                "amount": 1
+              }
+            ],
+            "every": 3,
+            "start": "2026-08-26"
+          },
+          "graceMinutes": 60,
+          "supply": {
+            "onHand": 2,
+            "lowDays": 7,
+            "refillFrom": "2026-09-10"
+          },
+          "rules": [],
+          "active": true
+        },
+        {
+          "id": "vd",
+          "name": "Vitamin D",
+          "form": "capsule",
+          "schedule": {
+            "times": [
+              {
+                "id": "d",
+                "mode": "clock",
+                "time": "10:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              6
+            ]
+          },
+          "graceMinutes": 120,
+          "supply": {
+            "onHand": 3,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "e3",
+            "slotId": "d",
+            "amount": 1,
+            "expectedAt": 1788008400000,
+            "state": "upcoming"
+          },
+          {
+            "medId": "vd",
+            "slotId": "d",
+            "amount": 1,
+            "expectedAt": 1788012000000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "e3",
+            "tracked": true,
+            "dosesLeft": 2,
+            "daysLeft": 6,
+            "perDay": 0.3333333333333333,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 12,
+            "runOutAt": 1788494400000,
+            "coverDays": 6,
+            "gapDays": 2,
+            "shortBeforeRefill": true
+          },
+          {
+            "medId": "vd",
+            "tracked": true,
+            "dosesLeft": 3,
+            "daysLeft": 21,
+            "perDay": 0.14285714285714285,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789790400000,
+            "coverDays": 21,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "every three days: not due the day after",
+      "now": 1788091200000,
+      "nowLocal": "2026-08-30, 08:00",
+      "meds": [
+        {
+          "id": "e3",
+          "name": "Every third day",
+          "form": "capsule",
+          "schedule": {
+            "times": [
+              {
+                "id": "d",
+                "mode": "clock",
+                "time": "09:00",
+                "amount": 1
+              }
+            ],
+            "every": 3,
+            "start": "2026-08-26"
+          },
+          "graceMinutes": 60,
+          "supply": {
+            "onHand": 2,
+            "lowDays": 7,
+            "refillFrom": "2026-09-10"
+          },
+          "rules": [],
+          "active": true
+        },
+        {
+          "id": "vd",
+          "name": "Vitamin D",
+          "form": "capsule",
+          "schedule": {
+            "times": [
+              {
+                "id": "d",
+                "mode": "clock",
+                "time": "10:00",
+                "amount": 1
+              }
+            ],
+            "days": [
+              0
+            ]
+          },
+          "graceMinutes": 120,
+          "supply": {
+            "onHand": 3,
+            "lowDays": 7,
+            "refillFrom": ""
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [
+          {
+            "medId": "vd",
+            "slotId": "d",
+            "amount": 1,
+            "expectedAt": 1788098400000,
+            "state": "upcoming"
+          }
+        ],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "e3",
+            "tracked": true,
+            "dosesLeft": 2,
+            "daysLeft": 6,
+            "perDay": 0.3333333333333333,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 11,
+            "runOutAt": 1788753600000,
+            "coverDays": 8,
+            "gapDays": 1,
+            "shortBeforeRefill": true
+          },
+          {
+            "medId": "vd",
+            "tracked": true,
+            "dosesLeft": 3,
+            "daysLeft": 21,
+            "perDay": 0.14285714285714285,
+            "low": false,
+            "refillOpen": false,
+            "daysUntilRefill": null,
+            "runOutAt": 1789876800000,
+            "coverDays": 21,
+            "gapDays": 0,
+            "shortBeforeRefill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "every three days: before the start date, nothing is due",
+      "now": 1788004800000,
+      "nowLocal": "2026-08-29, 08:00",
+      "meds": [
+        {
+          "id": "e3",
+          "name": "Every third day",
+          "form": "capsule",
+          "schedule": {
+            "times": [
+              {
+                "id": "d",
+                "mode": "clock",
+                "time": "09:00",
+                "amount": 1
+              }
+            ],
+            "every": 3,
+            "start": "2026-09-01"
+          },
+          "graceMinutes": 60,
+          "supply": {
+            "onHand": 2,
+            "lowDays": 7,
+            "refillFrom": "2026-09-10"
+          },
+          "rules": [],
+          "active": true
+        }
+      ],
+      "doses": [],
+      "kit": {
+        "onsetHours": 4,
+        "durationHours": 5
+      },
+      "expect": {
+        "expectedDoses": [],
+        "window": null,
+        "dueRules": [],
+        "supply": [
+          {
+            "medId": "e3",
+            "tracked": true,
+            "dosesLeft": 2,
+            "daysLeft": 6,
+            "perDay": 0.3333333333333333,
+            "low": true,
+            "refillOpen": false,
+            "daysUntilRefill": 12,
+            "runOutAt": 1788753600000,
+            "coverDays": 9,
+            "gapDays": 1,
+            "shortBeforeRefill": true
+          }
+        ]
+      }
+    },
+    {
       "name": "wear-off spacing: chosen as clock, the set times hold",
       "now": 1788008400000,
       "nowLocal": "2026-08-29, 09:00",

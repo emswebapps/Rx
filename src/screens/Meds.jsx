@@ -3,8 +3,9 @@ import { Plus, Pill, Clock, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNow } from '../lib/useCountdown.js';
 import { formatClock } from '../lib/time.js';
+import { PillGlyph, pillLook } from '../components/PillShape.jsx';
 import {
-  normalizeMed, expectedDosesToday, supplyStatus, rulesForMed, formatOffset, DAY_LABELS,
+  normalizeMed, expectedDosesToday, supplyStatus, rulesForMed, formatOffset, frequencyLabel,
 } from '../lib/meds.js';
 import { ViewHeader, SupplyBar, pageStyle } from '../components/medsUi.jsx';
 
@@ -37,13 +38,8 @@ function describeSchedule(med) {
   const times = m.schedule.times.map((t) => (t.mode === 'offset'
     ? `+${t.offsetHours}h`
     : formatClockString(t.time)));
-  const days = m.schedule.days;
-
-  let when = '';
-  if (days.length === 7) when = '';
-  else if (days.length === 5 && days.every((d) => d >= 1 && d <= 5)) when = ' · weekdays';
-  else if (days.length === 2 && days.every((d) => d === 0 || d === 6)) when = ' · weekends';
-  else when = ` · ${days.map((d) => DAY_LABELS[d]).join(', ')}`;
+  const label = frequencyLabel(m);
+  const when = label === 'Every day' ? '' : ` · ${label}`;
 
   return times.length ? `${times.join(', ')}${when}` : '';
 }
@@ -127,7 +123,8 @@ export default function MedsView() {
                   opacity: med.active === false ? 0.55 : 1,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <PillGlyph {...pillLook(med)} size={28} faded={med.active === false} />
                   <span style={{ flex: 1, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>
                     {med.name || 'Untitled'}
                   </span>

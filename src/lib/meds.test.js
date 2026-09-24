@@ -12,7 +12,7 @@ import {
   normalizeMed, activeMeds, atClock, parseISODate, takenDoses,
   expectedDosesToday, nextExpected, effectiveWindow, ruleMoments, dueRules,
   supplyStatus, supplyAfterDose, supplyAfterUndo, formatOffset, rulesForMed,
-  newMed, withDoseCount, wearOffFor, formatHalfLife, countMismatches, formatCountDiff,
+  newMed, withDoseCount, scheduledOnDay, unitsPerCalendarDay, frequencyLabel, wearOffFor, formatHalfLife, countMismatches, formatCountDiff,
   DEFAULT_GRACE_MINUTES, DEFAULT_MED,
 } from './meds.js';
 
@@ -437,4 +437,30 @@ test('pill counts that didn’t match are listed, newest first, with the differe
   assert.strictEqual(formatCountDiff(-2), '2 short');
   assert.strictEqual(formatCountDiff(1), '1 extra');
   assert.deepStrictEqual(countMismatches(med()), []);
+});
+
+// ── how often ───────────────────────────────────────────────────────────────
+
+test('every N days counts calendar days from the start date', () => {
+  const m = med({ schedule: { times: [{ id: 't', mode: 'clock', time: '09:00' }], every: 3, start: '2026-08-26' } });
+  // 2026-08-29 is the third day after the 26th.
+  assert.strictEqual(scheduledOnDay(m, at(9)), true);
+  assert.strictEqual(scheduledOnDay(m, at(9) + 24 * H), false);
+  assert.strictEqual(scheduledOnDay(m, at(9) + 3 * 24 * H), true);
+  assert.strictEqual(scheduledOnDay(m, new Date(2026, 7, 23, 9).getTime()), false); // before the start
+  assert.strictEqual(unitsPerCalendarDay(m), 1 / 3);
+  assert.strictEqual(frequencyLabel(m), 'Every 3 days');
+});
+
+test('a half-set interval falls back to the days of the week', () => {
+  assert.strictEqual(normalizeMed({ schedule: { every: 3 } }).schedule.every, undefined);
+  assert.strictEqual(normalizeMed({ schedule: { every: 1, start: '2026-08-26' } }).schedule.every, undefined);
+});
+
+test('how often reads as words', () => {
+  const w = (days) => frequencyLabel(med({ schedule: { times: [{ id: 't', mode: 'clock', time: '09:00' }], days } }));
+  assert.strictEqual(w([0, 1, 2, 3, 4, 5, 6]), 'Every day');
+  assert.strictEqual(w([1, 2, 3, 4, 5]), 'Weekdays');
+  assert.strictEqual(w([0]), 'Once a week, Sundays');
+  assert.strictEqual(w([1, 5]), 'Mon, Fri');
 });

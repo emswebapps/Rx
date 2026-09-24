@@ -4,13 +4,15 @@ import { Plus, X, Trash2, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { useApp } from '../context/AppContext';
 import {
   normalizeMed, supplyStatus, formatOffset, MED_KINDS, newMed, withDoseCount,
-  DOSE_FORMS, DAY_LABELS, EVERY_DAY, DEFAULT_TIME, formatAmount, doseSpacing,
+  DOSE_FORMS, EVERY_DAY, DEFAULT_TIME, formatAmount, doseSpacing,
+  frequencyLabel, MAX_EVERY_DAYS,
 } from '../lib/meds.js';
 import { headingStyle, Segmented, SupplyBar, RunOutLine, ViewHeader, pageStyle } from '../components/medsUi.jsx';
 import { useBack } from '../lib/useBack.js';
 import { notesForMed, preview } from '../lib/notes.js';
 import { formatHours } from '../lib/window.js';
 import RoutineEditor from '../components/RoutineEditor.jsx';
+import { PillGlyph, pillLook, PILL_SHAPES, PILL_COLORS } from '../components/PillShape.jsx';
 import { formatClock } from '../lib/time.js';
 
 const OFFSET_CHOICES = [-120, -60, -30, -15, 0, 30, 60, 120, 240];
@@ -320,6 +322,9 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
           ))}
         </select>
 
+        <label className="app-label" style={{ marginTop: '0.75rem' }}>Looks like</label>
+        <LookPicker med={med} onChange={(patch) => { const l = pillLook(med); set({ appearance: { shape: l.shape, color: l.colorKey, ...patch } }); }} />
+
         <label className="app-label" style={{ marginTop: '0.75rem' }}>Half-life (hours)</label>
         <input
           type="number" min="0.5" step="0.5" inputMode="decimal"
@@ -396,11 +401,8 @@ function MedForm({ med, title, onBack, set, footer, refill, hint, notes, onOpenN
           </div>
         )}
 
-        <label className="app-label" style={{ marginTop: '1.25rem' }}>Which days</label>
-        <DayPicker
-          days={med.schedule.days}
-          onChange={(days) => setSchedule({ days })}
-        />
+        <label className="app-label" style={{ marginTop: '1.25rem' }}>How often</label>
+        <FrequencyPicker schedule={med.schedule} onChange={setSchedule} />
 
         <label className="app-label" style={{ marginTop: '1rem' }}>
           How long past a time before it counts as missed
@@ -759,71 +761,180 @@ function TimeRow({ time, index, form, anchors, canRemove, onChange, onRemove }) 
 }
 
 /**
- * Which days it's taken.
- *
- * A deliberate day off is not a missed dose. Without this, a weekend drug
- * holiday reads as two misses and resets a streak that was never broken — the
- * fastest way to make an adherence number worth ignoring.
+ * Shape and colour for the medication's icon, previewed as you pick. The
+ * shapes are drawn in the chosen colour so the row reads as "which of these
+ * is mine", not as a list of words.
  */
-function DayPicker({ days, onChange }) {
-  const toggle = (d) => {
-    const next = days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort();
-    // Every day off means the medication is never due, which is not a schedule
-    // — it's an archive. Refuse the empty set rather than silently producing a
-    // medication that can never be logged.
-    if (next.length === 0) return;
-    onChange(next);
-  };
-
-  const everyDay = days.length === 7;
-
+function LookPicker({ med, onChange }) {
+  const look = pillLook(med);
+  const tile = (on) => ({
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+    padding: '0.5rem 0.25rem', borderRadius: '0.75rem', cursor: 'pointer',
+    backgroundColor: on ? 'var(--accent-soft)' : 'var(--surface2)',
+    border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+  });
   return (
     <div>
-      <div style={{ display: 'flex', gap: '0.25rem' }}>
-        {DAY_LABELS.map((label, d) => {
-          const on = days.includes(d);
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.375rem' }}>
+        {PILL_SHAPES.map((s) => (
+          <button key={s.key} onClick={() => onChange({ shape: s.key })} aria-pressed={look.shape === s.key}
+            aria-label={s.label} style={tile(look.shape === s.key)}>
+            <PillGlyph shape={s.key} color={look.color} size={30} />
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--muted)' }}>{s.label}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.625rem' }}>
+        {PILL_COLORS.map((c) => {
+          const on = look.colorKey === c.key;
           return (
-            <button
-              key={d}
-              onClick={() => toggle(d)}
-              aria-pressed={on}
+            <button key={c.key} onClick={() => onChange({ color: c.key })} aria-pressed={on} aria-label={c.key}
               style={{
-                flex: 1, padding: '0.625rem 0', borderRadius: '0.625rem', cursor: 'pointer',
-                fontSize: '0.75rem', fontWeight: 700,
-                color: on ? '#fff' : 'var(--muted)',
-                backgroundColor: on ? 'var(--accent)' : 'var(--surface2)',
-                border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
-              }}
-            >
-              {label[0]}
-            </button>
+                width: '2rem', height: '2rem', borderRadius: '9999px', cursor: 'pointer', backgroundColor: c.hex,
+                border: 'none', boxShadow: on ? '0 0 0 2px var(--bg), 0 0 0 4px var(--accent)' : 'inset 0 0 0 1px rgba(0,0,0,0.2)',
+              }} />
           );
         })}
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-        {!everyDay && (
-          <button
-            onClick={() => onChange(EVERY_DAY)}
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-text)',
-            }}
-          >
-            Every day
-          </button>
-        )}
-        {days.length !== 5 || !days.every((d) => d >= 1 && d <= 5) ? (
-          <button
-            onClick={() => onChange([1, 2, 3, 4, 5])}
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-text)',
-            }}
-          >
-            Weekdays only
-          </button>
-        ) : null}
-      </div>
+    </div>
+  );
+}
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * How often it's taken: every day, certain days of the week, or every few days.
+ *
+ * Days off are first-class either way. A weekly vitamin simply isn't due the
+ * other six days, so they can't read as misses or break a streak. The same goes
+ * for the two days between doses of an every-third-day medication.
+ */
+function FrequencyPicker({ schedule, onChange }) {
+  const days = schedule.days || EVERY_DAY;
+  const mode = schedule.every ? 'every' : days.length === 7 ? 'daily' : 'week';
+  const today = new Date().getDay();
+
+  const pick = (next) => {
+    if (next === 'daily') onChange({ days: EVERY_DAY, every: null, start: null });
+    // Starting "some days" from every day would change nothing, so it starts
+    // on today alone — the usual weekly case — ready to tap more.
+    if (next === 'week') onChange({ days: days.length === 7 ? [today] : days, every: null, start: null });
+    if (next === 'every') onChange({ every: schedule.every || 3, start: schedule.start || todayISO() });
+  };
+
+  const toggle = (d) => {
+    const next = days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort();
+    // Every day off means never due — that's an archive, not a schedule.
+    if (next.length === 0) return;
+    onChange({ days: next });
+  };
+
+  const preset = (label, set) => {
+    const on = set.length === days.length && set.every((d) => days.includes(d));
+    return (
+      <button
+        key={label}
+        onClick={() => onChange({ days: set })}
+        style={{
+          padding: '0.375rem 0.75rem', borderRadius: '9999px', cursor: 'pointer',
+          fontSize: '0.8125rem', fontWeight: 700,
+          backgroundColor: on ? 'var(--accent-soft)' : 'var(--surface2)',
+          border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+          color: on ? 'var(--accent-text)' : 'var(--text)',
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  const summary = frequencyLabel({ schedule });
+
+  return (
+    <div>
+      <Segmented
+        options={[
+          { key: 'daily', label: 'Every day' },
+          { key: 'week', label: 'Some days' },
+          { key: 'every', label: 'Every few days' },
+        ]}
+        value={mode}
+        onChange={pick}
+      />
+
+      {mode === 'week' && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {DAY_NAMES.map((label, d) => {
+              const on = days.includes(d);
+              return (
+                <button
+                  key={d}
+                  onClick={() => toggle(d)}
+                  aria-pressed={on}
+                  style={{
+                    flex: 1, padding: '0.625rem 0', borderRadius: '0.625rem', cursor: 'pointer',
+                    fontSize: '0.75rem', fontWeight: 700,
+                    color: on ? '#fff' : 'var(--muted)',
+                    backgroundColor: on ? 'var(--accent)' : 'var(--surface2)',
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginTop: '0.625rem' }}>
+            {preset('Weekdays', [1, 2, 3, 4, 5])}
+            {preset('Weekends', [0, 6])}
+            {preset('Mon & Fri', [1, 5])}
+            {preset('Mon, Wed, Fri', [1, 3, 5])}
+          </div>
+        </div>
+      )}
+
+      {mode === 'every' && (
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <label className="app-label">Every</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="number" min="2" max={MAX_EVERY_DAYS} step="1" inputMode="numeric"
+                value={schedule.every}
+                onChange={(e) => {
+                  const n = Math.round(Number(e.target.value));
+                  if (Number.isFinite(n)) onChange({ every: Math.max(2, Math.min(MAX_EVERY_DAYS, n)) });
+                }}
+                className="app-input"
+                style={{ width: '4.5rem' }}
+                aria-label="Every how many days"
+              />
+              <span style={{ fontSize: '0.9375rem', color: 'var(--muted)' }}>days</span>
+            </div>
+          </div>
+          <div style={{ flex: 1.4 }}>
+            <label className="app-label">Starting</label>
+            <input
+              type="date"
+              value={schedule.start || todayISO()}
+              onChange={(e) => e.target.value && onChange({ start: e.target.value })}
+              className="app-input"
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+      )}
+
+      <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.5rem' }}>
+        {summary}
+        {mode === 'every' && schedule.start ? ` — counting from ${new Date(`${schedule.start}T12:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}` : ''}
+        {mode !== 'daily' ? '. Days in between aren’t counted as missed.' : ''}
+      </p>
     </div>
   );
 }

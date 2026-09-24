@@ -227,7 +227,7 @@ export function normalizeMed(med = {}) {
     ...DEFAULT_MED,
     ...med,
     form: med.form || DEFAULT_MED.form,
-    schedule: { times, days: days.length ? days : EVERY_DAY },
+    schedule: { times, days: days.length ? days : EVERY_DAY, ...intervalOf(raw) },
     supply,
     graceMinutes: nonNegative(med.graceMinutes, DEFAULT_GRACE_MINUTES),
     onsetHours: positive(med.onsetHours, DEFAULT_ONSET_HOURS),
@@ -237,10 +237,56 @@ export function normalizeMed(med = {}) {
   };
 }
 
-/** Is this medication meant to be taken on the day `dayTs` falls in? */
+// The longest "every N days" the editor offers. Past that it's a monthly
+// thing, and a missed day of a monthly thing isn't what this app tracks.
+export const MAX_EVERY_DAYS = 30;
+
+/**
+ * "Every N days, counting from a date": `every` 2–30 and a `start` of
+ * "YYYY-MM-DD". Without a usable start there's nothing to count from, so the
+ * interval is ignored and the days of the week apply — a half-set interval
+ * must never turn into a medication that's due on no day at all.
+ */
+function intervalOf(raw) {
+  const every = Number(raw.every);
+  const ok = Number.isInteger(every) && every >= 2 && every <= MAX_EVERY_DAYS
+    && /^\d{4}-\d{2}-\d{2}$/.test(String(raw.start || ''));
+  return ok ? { every, start: raw.start } : {};
+}
+
+/** Whole calendar days from the date `iso` to the local day of `ts`. */
+function daysSince(iso, ts) {
+  const [y, mo, d] = iso.split('-').map(Number);
+  const t = new Date(ts);
+  return Math.round((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(y, mo - 1, d)) / (24 * HOUR_MS));
+}
+
+/**
+ * Is this medication meant to be taken on the day `dayTs` falls in?
+ *
+ * Either on chosen days of the week (every day, weekdays, Monday and Friday,
+ * Sundays only) or every N days from a start date. Counted in calendar days,
+ * not hours, so a clock change can't shift which day is a dose day.
+ */
 export function scheduledOnDay(med, dayTs) {
   const m = normalizeMed(med);
+  if (m.schedule.every) {
+    const n = daysSince(m.schedule.start, dayTs);
+    return n >= 0 && n % m.schedule.every === 0;
+  }
   return m.schedule.days.includes(new Date(dayTs).getDay());
+}
+
+/** How often, in words: "Every day", "Weekdays", "Sundays", "Every 3 days". */
+export function frequencyLabel(med) {
+  const s = normalizeMed(med).schedule;
+  if (s.every) return `Every ${s.every} days`;
+  if (s.days.length === 7) return 'Every day';
+  if (s.days.length === 5 && s.days.every((d) => d >= 1 && d <= 5)) return 'Weekdays';
+  if (s.days.length === 2 && s.days[0] === 0 && s.days[1] === 6) return 'Weekends';
+  const names = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+  if (s.days.length === 1) return `Once a week, ${names[s.days[0]]}`;
+  return s.days.map((d) => DAY_LABELS[d]).join(', ');
 }
 
 /** Units taken across a full scheduled day — what supply burns through. */
@@ -252,7 +298,7 @@ export function unitsPerScheduledDay(med) {
 /** Average units per calendar day, accounting for days off. */
 export function unitsPerCalendarDay(med) {
   const m = normalizeMed(med);
-  return unitsPerScheduledDay(m) * (m.schedule.days.length / 7);
+  return unitsPerScheduledDay(m) * (m.schedule.every ? 1 / m.schedule.every : m.schedule.days.length / 7);
 }
 
 export function activeMeds(meds) {

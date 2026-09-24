@@ -143,7 +143,7 @@ function normalizeMed(med) {
   return {
     name: '', strength: '', kind: 'long', form: 'tablet', active: true,
     ...m,
-    schedule: { times, days: days.length ? days : EVERY_DAY },
+    schedule: Object.assign({ times, days: days.length ? days : EVERY_DAY }, intervalOf(raw)),
     supply: { ...DEFAULT_SUPPLY, ...(m.supply || {}) },
     graceMinutes: nonNegative(m.graceMinutes, DEFAULT_GRACE_MINUTES),
     onsetHours: positive(m.onsetHours, DEFAULT_ONSET_HOURS),
@@ -158,8 +158,31 @@ function localDayOfWeek(ts, tz) {
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(name);
 }
 
+const MAX_EVERY_DAYS = 30;
+
+/** See intervalOf in src/lib/meds.js. */
+function intervalOf(raw) {
+  const every = Number(raw.every);
+  const ok = Number.isInteger(every) && every >= 2 && every <= MAX_EVERY_DAYS
+    && /^\d{4}-\d{2}-\d{2}$/.test(String(raw.start || ''));
+  return ok ? { every, start: raw.start } : {};
+}
+
+/** Whole calendar days from `iso` to the local date of `ts` in `tz`. */
+function daysSince(iso, ts, tz) {
+  const [y, mo, d] = iso.split('-').map(Number);
+  const p = tzParts(ts, tz);
+  return Math.round((Date.UTC(p.year, p.month - 1, p.day) - Date.UTC(y, mo - 1, d)) / (24 * HOUR_MS));
+}
+
+/** See scheduledOnDay in src/lib/meds.js. */
 function scheduledOnDay(med, dayTs, tz) {
-  return normalizeMed(med).schedule.days.includes(localDayOfWeek(dayTs, tz));
+  const m = normalizeMed(med);
+  if (m.schedule.every) {
+    const n = daysSince(m.schedule.start, dayTs, tz);
+    return n >= 0 && n % m.schedule.every === 0;
+  }
+  return m.schedule.days.includes(localDayOfWeek(dayTs, tz));
 }
 
 function unitsPerScheduledDay(med) {
@@ -168,7 +191,7 @@ function unitsPerScheduledDay(med) {
 
 function unitsPerCalendarDay(med) {
   const m = normalizeMed(med);
-  return unitsPerScheduledDay(m) * (m.schedule.days.length / 7);
+  return unitsPerScheduledDay(m) * (m.schedule.every ? 1 / m.schedule.every : m.schedule.days.length / 7);
 }
 
 function activeMeds(meds) {
