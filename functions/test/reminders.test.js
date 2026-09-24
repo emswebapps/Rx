@@ -406,7 +406,7 @@ test('no medication notification ever names the medication', () => {
   const secrets = [
     'Adderall XR', 'Adderall IR', '20 mg', '10 mg',
     'Eat first — nothing too high in fat', 'Walgreens on Fifth',
-    'Three scrambled eggs',
+    'Three scrambled eggs', 'StarKist Ranch pouch', 'Midday buffer',
   ];
   // The morning routine and water, so their reminders are in the sweep too.
   const XR_ROUTINE = {
@@ -426,6 +426,7 @@ test('no medication notification ever names the medication', () => {
     crashKit: {
       onsetHours: 4, durationHours: 5, doseTracking: true,
       water: { enabled: true, everyMinutes: 60, goal: 8, until: '20:00' },
+      mealPlan: { meals: [{ id: 'lunch', name: 'Midday buffer', food: 'StarKist Ranch pouch', anchor: 'clock', time: '12:30' }] },
     },
     rxRoutineRuns: [{ id: '2026-07-26|xr|t1', day: '2026-07-26', done: { eat: localAt(7, 10) } }],
   };
@@ -446,7 +447,7 @@ test('no medication notification ever names the medication', () => {
   // Every optional nudge is switched ON here, whatever its default. A message
   // kind that is off by default is exactly the one that would otherwise slip
   // past this sweep and ship unread.
-  const everything = { crash: { ...ALL_ON, doseLate: true, routineWait: true, water: true, effectCheckIn: true } };
+  const everything = { crash: { ...ALL_ON, doseLate: true, routineWait: true, water: true, effectCheckIn: true, mealTime: true } };
   const days = [
     withRegimen({ ...lowSupply, ...routineAndWater, crashDoses: [], notifPrefs: everything }),
     withRegimen({ ...lowSupply, ...routineAndWater, notifPrefs: everything }),
@@ -459,6 +460,7 @@ test('no medication notification ever names the medication', () => {
       for (const m of [0, 15, 30, 45]) {
         for (const msg of collectCrashMessages(data, {}, localAt(h, m), TZ)) {
           seen.add(msg.tag.startsWith('rx-water-') ? 'rx-water'
+            : msg.tag.startsWith('rx-meal-') ? 'rx-meal'
             : msg.tag.startsWith('crash-short-') ? msg.tag.replace(/-ir-.*$/, '-ir')
               : msg.tag.replace(/-\d{4}-\d{2}-\d{2}$/, ''));
           const blob = `${msg.title} ${msg.body}`;
@@ -475,7 +477,7 @@ test('no medication notification ever names the medication', () => {
   assert.deepStrictEqual([...seen].sort(), [
     'crash-dose-ir-t1', 'crash-dose-xr-t1', 'crash-escrow', 'crash-late-ir-t1',
     'crash-late-xr-t1', 'crash-note', 'crash-refill-xr', 'crash-rule-xr-eat',
-    'crash-window-d-xr', 'rx-wait-2026-07-26_xr_t1-w', 'rx-water',
+    'crash-window-d-xr', 'rx-wait-2026-07-26_xr_t1-w', 'rx-water', 'rx-meal',
     'crash-short-ir', 'crash-short-soon-ir', 'rx-effect-d-xr-working', 'rx-effect-d-xr-wearing',
   ].sort());
 });
@@ -626,4 +628,24 @@ test('a meal step starts the wait after it, like any other step', () => {
   });
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 50), TZ)), []);
   assert.deepStrictEqual(onlyNew(collectCrashMessages(data, {}, localAt(7, 56), TZ)), [WAIT_TAG]);
+});
+
+// ── Meal times ──────────────────────────────────────────────────────────────
+
+test('a meal time buzzes once it comes due, and not once it’s eaten or switched off', () => {
+  const kit = {
+    onsetHours: 4, durationHours: 5, doseTracking: true,
+    mealPlan: { meals: [{ id: 'lunch', name: 'Lunch', food: 'Tuna', anchor: 'clock', time: '12:30' }] },
+  };
+  const TAG = 'rx-meal-2026-07-26-lunch';
+  const data = withRegimen({ crashKit: kit, crashDoses: [], notifPrefs: { crash: { ...ALL_ON, mealTime: true } } });
+  assert.ok(!tags(collectCrashMessages(data, {}, localAt(12, 25), TZ)).includes(TAG));
+  const msg = collectCrashMessages(data, {}, localAt(12, 35), TZ).find((m) => m.tag === TAG);
+  assert.strictEqual(msg.title, 'Time to eat');
+  assert.ok(!tags(collectCrashMessages(data, {}, localAt(13, 30), TZ)).includes(TAG), 'not an hour late');
+
+  const ate = { ...data, rxEaten: [{ id: '2026-07-26|lunch', day: '2026-07-26', mealId: 'lunch', at: localAt(12, 31) }] };
+  assert.ok(!tags(collectCrashMessages(ate, {}, localAt(12, 35), TZ)).includes(TAG));
+  const off = { ...data, notifPrefs: { crash: { ...ALL_ON, mealTime: false } } };
+  assert.ok(!tags(collectCrashMessages(off, {}, localAt(12, 35), TZ)).includes(TAG));
 });

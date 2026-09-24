@@ -11,6 +11,7 @@
 import { normalizeMed, expectedDosesOnDay, startOfDay } from './meds.js';
 import { SIDE_EFFECTS } from './effects.js';
 import { mealLog } from './meals.js';
+import { minutesAfter } from './onset.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -48,13 +49,15 @@ export function dosesCSV(meds, doses) {
   }
 
   return toCSV(
-    ['date', 'time', 'medication', 'strength', 'amount', 'status', 'timing', 'logged from'],
+    ['date', 'time', 'medication', 'strength', 'amount', 'status', 'timing', 'logged from',
+      'kicked in (min)', 'dropped off (min)'],
     list.map((d) => {
       const m = byId.get(d.medId);
       return [
         date(d.takenAt), time(d.takenAt), m ? m.name : '', m ? m.strength : '',
         d.amount ?? '', d.status === 'skipped' ? 'skipped' : 'taken',
         d.status === 'skipped' ? '' : (late.get(d.id) || ''), d.source || 'app',
+        minutesAfter(d, d.kickedInAt) ?? '', minutesAfter(d, d.droppedAt) ?? '',
       ];
     }),
   );

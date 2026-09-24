@@ -16,12 +16,20 @@ export const MEAL_STATUS = [
 
 const key = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+/** Grams of protein as typed — a positive number, or null for "not given". */
+export function grams(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 10) / 10 : null;
+}
+
 export function normalizeMeal(m = {}) {
   return {
     id: m.id,
     name: String(m.name || '').trim(),
     status: m.status === 'avoid' ? 'avoid' : 'ok',
     note: String(m.note || ''),
+    protein: grams(m.protein),
     createdAt: typeof m.createdAt === 'number' ? m.createdAt : null,
   };
 }
@@ -70,4 +78,42 @@ export function saveMeal(list, meal, id, now = Date.now()) {
     return (list || []).map((x) => (x && x.id === existing.id ? { ...x, ...m, id: existing.id, createdAt: existing.createdAt } : x));
   }
   return [...(list || []), { ...m, id, createdAt: now }];
+}
+
+/**
+ * The protein in something eaten, from the numbers on your own list, or null
+ * when the list doesn't say.
+ *
+ * An exact name wins. Failing that, "StarKist Ranch pouch + crackers" is read
+ * as its parts, and adds up only if every part is on the list with a number —
+ * a total that quietly left one out would be a number you can't trust.
+ */
+export function proteinFor(list, food) {
+  const whole = findMeal(list, food);
+  if (whole) return whole.protein;
+  const parts = String(food || '').split(/\s*[+,]\s*/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  let total = 0;
+  for (const p of parts) {
+    const m = findMeal(list, p);
+    if (!m || m.protein == null) return null;
+    total += m.protein;
+  }
+  return Math.round(total * 10) / 10;
+}
+
+/**
+ * A day's protein from what was eaten: the sum of what's known, and how many
+ * meals had no number to add.
+ */
+export function proteinTotal(list, foods) {
+  let grams = 0;
+  let known = 0;
+  let unknown = 0;
+  for (const f of foods || []) {
+    const g = proteinFor(list, f);
+    if (g == null) unknown += 1;
+    else { grams += g; known += 1; }
+  }
+  return { grams: Math.round(grams * 10) / 10, known, unknown };
 }
