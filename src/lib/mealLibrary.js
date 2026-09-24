@@ -22,15 +22,52 @@ export function normalizeMeal(m = {}) {
     name: String(m.name || '').trim(),
     status: m.status === 'avoid' ? 'avoid' : 'ok',
     note: String(m.note || ''),
+    // What's in it, as written ("2 large eggs + 1 Ready Clean Bar").
+    detail: String(m.detail || ''),
+    // A pick-one list, e.g. the fat added to lunch. Empty when there's no choice.
+    options: Array.isArray(m.options) ? m.options.map((o) => String(o || '').trim()).filter(Boolean) : [],
     createdAt: typeof m.createdAt === 'number' ? m.createdAt : null,
   };
 }
 
-/** The approved ones, A–Z — what the pickers offer. */
+/** "Lunch + Half an avocado" — a meal and the option picked, as one label. */
+export function mealLabel(name, option) {
+  const n = String(name || '').trim();
+  const o = String(option || '').trim();
+  return o ? `${n} + ${o}` : n;
+}
+
+/**
+ * The meal plan, as meals to add in one tap. The detail and targets are the
+ * plan's own words; the app keeps them, it doesn't vouch for them.
+ */
+export const PLAN_MEALS = [
+  {
+    name: 'Breakfast',
+    detail: '2 large eggs (scrambled or boiled) + 1 Ready Clean Bar',
+    note: '~27 g protein · ~15–17 g fat · ~360 cal · with the morning dose',
+  },
+  {
+    name: 'Lunch',
+    detail: '2 StarKist Ranch Tuna pouches + 10–12 crackers',
+    note: '~30 g protein · ~12–18 g fat · 3.5–4 h after breakfast',
+    options: ['1.5 tbsp mayo', 'Half an avocado', 'Handful of nuts'],
+  },
+  {
+    name: 'Dinner',
+    detail: '2 StarKist Ranch Tuna pouches + 10–12 crackers',
+    note: '~30 g protein · ~12–18 g fat · as the last dose wears off',
+    options: ['1.5 tbsp mayo', 'Half an avocado', 'Handful of nuts'],
+  },
+];
+
+/**
+ * The approved ones, in the order they were added — what the pickers offer.
+ * Breakfast, lunch, dinner reads better than dinner, breakfast, lunch.
+ */
 export function okMeals(list) {
   return (list || []).filter(Boolean).map(normalizeMeal)
-    .filter((m) => m.name && m.status === 'ok')
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter((m) => m.name && m.status === 'ok');
 }
 
 export function avoidMeals(list) {

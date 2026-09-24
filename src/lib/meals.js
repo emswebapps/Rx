@@ -61,6 +61,27 @@ export function mealLog(meds, doses, runs, effects = []) {
       });
     }
   }
+  // Meals logged with the dose itself ("What did you eat with it?"). Eaten
+  // alongside, so no gap to measure.
+  for (const d of taken) {
+    if (!d.meal || !d.meal.name) continue;
+    const med = byId.get(d.medId);
+    const checkIn = (effects || []).find((e) => e && !e.dismissed && e.doseId === d.id && e.phase === 'working');
+    const slotIndex = med ? med.schedule.times.findIndex((t) => t.id === d.slotId) : -1;
+    rows.push({
+      id: `dose|${d.id}`,
+      medId: d.medId,
+      medName: med ? med.name : '',
+      doseNumber: slotIndex >= 0 ? slotIndex + 1 : null,
+      planned: d.meal.name,
+      food: d.meal.option ? `${d.meal.name} + ${d.meal.option}` : d.meal.name,
+      changed: false,
+      ateAt: d.takenAt,
+      doseAt: d.takenAt,
+      minutesBefore: 0,
+      focus: checkIn && checkIn.focus != null ? Number(checkIn.focus) : null,
+    });
+  }
   return rows.sort((a, b) => b.ateAt - a.ateAt);
 }
 

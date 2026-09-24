@@ -62,105 +62,64 @@ export function PillIcon({ state, size = 44, med }) {
   );
 }
 
-export default function ScheduleRow({ entry, onOpen, onNotes, noteCount = 0, now = Date.now() }) {
+/**
+ * The card on Today: the pill, a thin rule, the name, and the instruction.
+ * Nothing else on its face — how it went is the badge on the pill, and the
+ * details (when it wears off, the half-life, notes) are in the sheet that
+ * opens on tap. A list you read half-awake should be this plain.
+ */
+export default function ScheduleRow({ entry, onOpen, now = Date.now() }) {
   const { med, state, amount } = entry;
   const supply = supplyStatus(med, now);
   const status = statusText(entry);
   const tone = STATUS[state] || STATUS.unknown;
-  const wear = wearOffFor(entry);
-  const halfLife = formatHalfLife(med.halfLifeHours);
-
-  // The small print: when this one wears off and the half-life, both the
-  // user's own numbers. Past tense once the time has gone by.
-  const facts = [
-    wear && (wear.projected
-      ? `Wears off ~${formatClock(wear.at)} if on time`
-      : `${wear.at <= now ? 'Wore' : 'Wears'} off ${formatClock(wear.at)}`),
-    halfLife && `Half-life ${halfLife}`,
-  ].filter(Boolean);
+  // Only the states that ask for something get words; the rest is the badge.
+  const loud = state === 'due' || state === 'skipped';
 
   return (
-    <div style={{
-      position: 'relative', borderRadius: '1rem',
-      backgroundColor: 'var(--surface)',
-      border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--surface)'}`,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-    }}>
-      <button
-        onClick={() => onOpen(entry)}
-        aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
-        style={{
-          width: '100%', textAlign: 'left', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: '0.75rem',
-          // Room on the right for the notes button, which sits over the card
-          // rather than inside this one — a button can't hold a button.
-          padding: `0.625rem ${onNotes ? '3.25rem' : '0.875rem'} 0.625rem 0.875rem`,
-          background: 'none', border: 'none', borderRadius: '1rem',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        <PillIcon state={state} med={med} size={34} />
-        <div style={{ flex: 1, minWidth: 0 }}>
+    <button
+      onClick={() => onOpen(entry)}
+      aria-label={`${med.name || 'Untitled'}${status ? `, ${status}` : ''}`}
+      style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '1rem',
+        padding: '1rem 1.125rem', borderRadius: '1rem',
+        backgroundColor: 'var(--surface)',
+        border: `1px solid ${state === 'due' ? 'var(--accent)' : 'var(--surface)'}`,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <PillIcon state={state} med={med} size={40} />
+      <div style={{ width: 1, alignSelf: 'stretch', backgroundColor: 'var(--border2)', margin: '0.125rem 0' }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: '1.125rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
+        }}>
+          {med.name || 'Untitled'}
+        </p>
+        <p style={{ fontSize: '0.9375rem', color: 'var(--subtle)', marginTop: '0.1875rem', lineHeight: 1.35 }}>
+          {doseInstruction(med, amount)}
+        </p>
+        {loud && (
+          <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: tone.color, marginTop: '0.1875rem' }}>
+            {status}
+          </p>
+        )}
+        {supply.low && supply.tracked && state !== 'taken' && (
           <p style={{
-            fontSize: '1rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            opacity: state === 'skipped-on-purpose' ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', gap: '0.3125rem', marginTop: '0.25rem',
+            fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600,
           }}>
-            {med.name || 'Untitled'}
+            <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+            {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
+            {supply.refillOpen ? ' — refill now' : ''}
           </p>
-          {/* Instruction and status share a line: one glance, one row. */}
-          <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.125rem', lineHeight: 1.35 }}>
-            {status && <strong style={{ fontWeight: 700, color: tone.color }}>{status} · </strong>}
-            {doseInstruction(med, amount)}
-          </p>
-          {facts.length > 0 && (
-            <p style={{
-              fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.125rem', lineHeight: 1.35,
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {facts.join(' · ')}
-            </p>
-          )}
-          {supply.low && supply.tracked && state !== 'taken' && (
-            <p style={{
-              display: 'flex', alignItems: 'center', gap: '0.3125rem', marginTop: '0.375rem',
-              fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600,
-            }}>
-              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
-              {supply.dosesLeft === 0 ? 'None left' : `${supply.dosesLeft} days left`}
-              {supply.refillOpen ? ' — refill now' : ''}
-            </p>
-          )}
-        </div>
-      </button>
-
-      {onNotes && (
-        <button
-          onClick={() => onNotes(med)}
-          aria-label={`Notes for ${med.name || 'this medication'}${noteCount ? ` (${noteCount})` : ''}`}
-          style={{
-            position: 'absolute', top: '50%', right: '0.5rem', transform: 'translateY(-50%)',
-            width: '2.25rem', height: '2.25rem', borderRadius: '9999px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'var(--surface2)', border: 'none',
-            color: noteCount ? 'var(--accent-text)' : 'var(--muted)',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          <NotebookPen size={16} />
-          {noteCount > 0 && (
-            <span style={{
-              position: 'absolute', top: -2, right: -2, minWidth: '1.125rem', height: '1.125rem',
-              padding: '0 0.25rem', borderRadius: '9999px', backgroundColor: 'var(--accent)',
-              color: '#fff', fontSize: '0.6875rem', fontWeight: 800,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {noteCount}
-            </span>
-          )}
-        </button>
-      )}
-    </div>
+        )}
+      </div>
+    </button>
   );
 }
 
@@ -241,7 +200,7 @@ const sheetHeading = {
  * `when` says which day the sheet is for. A day still to come can't be logged —
  * there is nothing to record yet — so it offers only the medication itself.
  */
-export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn }) {
+export function DoseSheet({ entry, when, routineNote, meals = [], onClose, onTake, onSkip, onUndo, onChangeTime, onOpenMed, onCheckIn, onNotes, noteCount = 0 }) {
   const { med, state, expectedAt, amount, dose, entry: logged } = entry;
   const rules = rulesForMed(med);
   const status = statusText(entry);
@@ -279,6 +238,30 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         {status && <span style={{ fontWeight: 700, color: tone.color }}>{status}</span>}
       </div>
 
+      {dose && dose.meal && dose.meal.name && (
+        <p style={{ fontSize: '0.9375rem', color: 'var(--text)', padding: '0.5rem 0' }}>
+          Ate with it: <strong>{dose.meal.option ? `${dose.meal.name} + ${dose.meal.option}` : dose.meal.name}</strong>
+        </p>
+      )}
+
+      {/* The small print that used to sit on the card: when it wears off, and
+          the half-life as entered. */}
+      {(() => {
+        const wear = wearOffFor(entry);
+        const halfLife = formatHalfLife(med.halfLifeHours);
+        const facts = [
+          wear && (wear.projected
+            ? `Wears off ~${formatClock(wear.at)} if taken on time`
+            : `${wear.at <= Date.now() ? 'Wore' : 'Wears'} off ${formatClock(wear.at)}`),
+          halfLife && `Half-life ${halfLife}`,
+        ].filter(Boolean);
+        return facts.length ? (
+          <p style={{ fontSize: '0.875rem', color: 'var(--muted)', padding: '0.5rem 0', fontVariantNumeric: 'tabular-nums' }}>
+            {facts.join(' · ')}
+          </p>
+        ) : null;
+      })()}
+
       {rules.length > 0 && (
         <div style={{ display: 'grid', gap: '0.375rem', padding: '0.75rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
           {rules.map((r) => (
@@ -312,7 +295,8 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
           today={when === 'today'}
           fallback={expectedAt}
           onCancel={() => setPicking(false)}
-          onConfirm={(at) => onTake(entry, at)}
+          meals={meals}
+          onConfirm={(at, meal) => onTake(entry, at, meal)}
         />
       ) : (
       <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1.5rem' }}>
@@ -327,6 +311,9 @@ export function DoseSheet({ entry, when, routineNote, onClose, onTake, onSkip, o
         )}
         {settled && logged && (
           <RoundAction Icon={Undo2} label={state === 'taken' ? 'Not taken' : 'Undo skip'} onClick={() => onUndo(logged)} />
+        )}
+        {onNotes && (
+          <RoundAction Icon={NotebookPen} label={noteCount ? `Notes (${noteCount})` : 'Notes'} onClick={() => onNotes(med)} />
         )}
         <RoundAction Icon={Info} label="Medication" onClick={() => onOpenMed(med.id)} />
       </div>
@@ -357,7 +344,7 @@ const hhmm = (ts) => { const d = new Date(ts); return `${pad2(d.getHours())}:${p
  * point there is filling in a day already gone. A time later than now on
  * today means this morning, not tonight — the same rule as TimeEditor.
  */
-function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
+function TakeTimePicker({ today, fallback, meals = [], onCancel, onConfirm }) {
   const start = today ? Date.now() : (fallback ?? Date.now());
   const [value, setValue] = useState(hhmm(start));
 
@@ -369,6 +356,12 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
     return d.getTime();
   };
   const ago = (min) => setValue(hhmm(Date.now() - min * 60 * 1000));
+  // What was eaten with it: one of the saved meals (and its option, if it
+  // has a pick-one list), or nothing. Optional — "Log it" works either way.
+  const [meal, setMeal] = useState(null);
+  const [option, setOption] = useState(null);
+  const picked = meals.find((m) => m.id === meal) || null;
+  const pickMeal = (id) => { setMeal(meal === id ? null : id); setOption(null); };
 
   return (
     <div style={{ marginTop: '1.25rem' }}>
@@ -400,6 +393,32 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
           ))}
         </div>
       )}
+      {meals.length > 0 && (
+        <>
+          <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '1rem 0 0.5rem' }}>
+            What did you eat with it?
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {meals.map((m) => (
+              <Chip key={m.id} on={meal === m.id} onClick={() => pickMeal(m.id)}>{m.name}</Chip>
+            ))}
+          </div>
+          {picked && picked.detail && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--subtle)', marginTop: '0.375rem' }}>{picked.detail}</p>
+          )}
+          {picked && picked.options.length > 0 && (
+            <>
+              <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--muted)', margin: '0.5rem 0 0.375rem' }}>With</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                {picked.options.map((o) => (
+                  <Chip key={o} on={option === o} onClick={() => setOption(option === o ? null : o)}>{o}</Chip>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button
           onClick={onCancel}
@@ -411,12 +430,34 @@ function TakeTimePicker({ today, fallback, onCancel, onConfirm }) {
         >
           Back
         </button>
-        <button onClick={() => onConfirm(resolve())} className="app-btn-primary" style={{ flex: 1, fontSize: '1rem' }}>
+        <button
+          onClick={() => onConfirm(resolve(), picked ? { name: picked.name, option: option || null } : null)}
+          className="app-btn-primary"
+          style={{ flex: 1, fontSize: '1rem' }}
+        >
           <Check size={17} style={{ verticalAlign: '-3px', marginRight: '0.375rem' }} />
           Log it
         </button>
       </div>
     </div>
+  );
+}
+
+function Chip({ on, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      style={{
+        padding: '0.5rem 0.875rem', borderRadius: '9999px', cursor: 'pointer',
+        backgroundColor: on ? 'var(--accent)' : 'var(--surface2)',
+        border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+        color: on ? '#fff' : 'var(--text)', fontSize: '0.9375rem', fontWeight: 700,
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -428,7 +469,7 @@ function RoundAction({ Icon, label, onClick, primary = false }) {
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-        minWidth: '4.5rem', WebkitTapHighlightColor: 'transparent',
+        minWidth: '3.75rem', maxWidth: '5rem', WebkitTapHighlightColor: 'transparent',
       }}
     >
       <span style={{
@@ -439,7 +480,7 @@ function RoundAction({ Icon, label, onClick, primary = false }) {
       }}>
         <Icon size={primary ? 30 : 22} strokeWidth={primary ? 2.75 : 2} />
       </span>
-      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: primary ? 'var(--accent-text)' : 'var(--muted)' }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: primary ? 'var(--accent-text)' : 'var(--muted)', textAlign: 'center', lineHeight: 1.2 }}>
         {label}
       </span>
     </button>

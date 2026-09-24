@@ -51,3 +51,9 @@ test('focus by food needs a couple of rated doses before it says anything', () =
     { food: '2 eggs', n: 2, focus: 4.5 }, { food: 'Bagel', n: 2, focus: 2.5 },
   ]);
 });
+
+test('a meal logged with the dose shows up too, with its option', () => {
+  const doses = [{ id: 'x', medId: 'ir', slotId: 't2', takenAt: at(24, 12), status: 'taken', meal: { name: 'Lunch', option: 'Half an avocado' } }];
+  const rows = mealLog([IR], doses, []);
+  assert.deepStrictEqual(rows.map((r) => [r.food, r.doseNumber, r.minutesBefore]), [['Lunch + Half an avocado', 2, 0]]);
+});

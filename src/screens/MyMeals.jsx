@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Check, Ban, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useBack } from '../lib/useBack.js';
-import { okMeals, avoidMeals, MEAL_STATUS } from '../lib/mealLibrary.js';
+import { okMeals, avoidMeals, MEAL_STATUS, PLAN_MEALS } from '../lib/mealLibrary.js';
 import { ViewHeader, Segmented, pageStyle } from '../components/medsUi.jsx';
 import { mealLog } from '../lib/meals.js';
 
@@ -30,6 +30,9 @@ export default function MyMeals() {
     .filter((f) => f && !known.has(f.toLowerCase()))
     .slice(0, 8);
 
+  // The meal plan, one tap to add — whichever of its meals aren't saved yet.
+  const missingPlan = PLAN_MEALS.filter((m) => !known.has(m.name.toLowerCase()));
+
   const add = () => {
     if (!name.trim()) return;
     saveRxMeal({ name, note, status });
@@ -43,6 +46,23 @@ export default function MyMeals() {
         Meals you know work with your dose, and ones to avoid. You decide what goes here — ask your
         prescriber or pharmacist if you’re not sure about a food.
       </p>
+
+      {missingPlan.length > 0 && (
+        <div className="app-card" style={{ padding: '0.875rem', marginBottom: '0.75rem', borderColor: 'var(--accent)' }}>
+          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>Add my meal plan</p>
+          <ul style={{ margin: '0 0 0.625rem 1rem', padding: 0, fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.55 }}>
+            {missingPlan.map((m) => (
+              <li key={m.name}>
+                <strong style={{ color: 'var(--text)' }}>{m.name}</strong> · {m.detail}
+                {m.options ? <span style={{ color: 'var(--subtle)' }}> · + {m.options.join(' / ')}</span> : null}
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => saveRxMeal(missingPlan.map((m) => ({ ...m, status: 'ok' })))} className="app-btn-primary">
+            Add {missingPlan.length === PLAN_MEALS.length ? 'all three' : 'the rest'}
+          </button>
+        </div>
+      )}
 
       <div className="app-card" style={{ padding: '0.875rem', display: 'grid', gap: '0.5rem' }}>
         <input
@@ -108,6 +128,10 @@ function List({ title, items, Icon, tone, editing, setEditing, onSave, onDelete,
               <Icon size={16} style={{ color: tone, flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>{m.name}</span>
+                {m.detail && <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--muted)' }}>{m.detail}</span>}
+                {m.options.length > 0 && (
+                  <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--muted)' }}>Pick one: {m.options.join(' · ')}</span>
+                )}
                 {m.note && <span style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--subtle)' }}>{m.note}</span>}
               </span>
             </button>
@@ -121,13 +145,23 @@ function List({ title, items, Icon, tone, editing, setEditing, onSave, onDelete,
 function EditRow({ meal, onDone, onDelete }) {
   const [note, setNote] = useState(meal.note);
   const [status, setStatus] = useState(meal.status);
+  const [detail, setDetail] = useState(meal.detail);
+  const [options, setOptions] = useState(meal.options.join(', '));
   return (
     <div className="app-card" style={{ padding: '0.75rem', display: 'grid', gap: '0.5rem' }}>
       <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>{meal.name}</p>
+      <input value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="What’s in it" className="app-input" />
+      <input value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Pick-one choices, comma separated (optional)" className="app-input" />
       <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note" className="app-input" />
       <Segmented options={MEAL_STATUS} value={status} onChange={setStatus} />
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button onClick={() => onDone({ note, status })} className="app-btn-primary" style={{ flex: 1 }}>Save</button>
+        <button
+          onClick={() => onDone({ note, status, detail, options: options.split(',').map((o) => o.trim()).filter(Boolean) })}
+          className="app-btn-primary"
+          style={{ flex: 1 }}
+        >
+          Save
+        </button>
         <button onClick={() => onDone(null)} style={{ ...chip, padding: '0 1rem' }}>Cancel</button>
         <button onClick={onDelete} aria-label="Delete meal" style={{ ...chip, padding: '0 0.75rem', color: 'var(--danger)' }}>
           <Trash2 size={16} />

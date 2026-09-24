@@ -10,31 +10,22 @@ import MealChips, { AvoidWarning } from './MealChips.jsx';
  * always exactly one; it can be moved but not removed, because a routine
  * around a dose with no dose in it is just a to-do list.
  */
-export default function RoutineEditor({ routine, onChange }) {
+export default function RoutineEditor({ routine, onChange, onCopyToAll }) {
   const steps = Array.isArray(routine) ? routine : [];
   const stamp = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
+  // One routine, the one that works: something to eat, fifteen minutes,
+  // then the dose. The food and the minutes can be changed after; anything
+  // else is "Customize" below once it's set.
   if (steps.length === 0) {
     return (
-      <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button onClick={() => onChange(routinePreset(15))} style={chip(true)}>
-          <ListChecks size={14} /> Meal → wait 15 min → take
+      <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.375rem' }}>
+        <button onClick={() => onChange(routinePreset(15, 'Snack'))} style={{ ...chip(true), justifyContent: 'center', padding: '0.625rem' }}>
+          <ListChecks size={15} /> Add routine: eat → wait 15 min → take
         </button>
-        <button onClick={() => onChange(routinePreset(30))} style={chip(true)}>
-          <ListChecks size={14} /> Meal → wait 30 min → take
-        </button>
-        <button
-          onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'meal', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
-          style={chip(true)}
-        >
-          <Utensils size={14} /> Meal → take
-        </button>
-        <button
-          onClick={() => onChange([{ id: `s-${stamp()}`, kind: 'task', text: '' }, { id: `s-${stamp()}`, kind: 'dose' }])}
-          style={chip(false)}
-        >
-          <Plus size={14} /> Build a routine
-        </button>
+        {onCopyToAll && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--subtle)' }}>Then copy it to your other doses in one tap.</p>
+        )}
       </div>
     );
   }
@@ -143,6 +134,11 @@ export default function RoutineEditor({ routine, onChange }) {
         <button onClick={() => onChange([])} style={{ ...chip(false), color: 'var(--muted)' }}>
           Remove routine
         </button>
+        {onCopyToAll && (
+          <button onClick={onCopyToAll} style={chip(true)}>
+            <ListChecks size={14} /> Use for every dose
+          </button>
+        )}
       </div>
     </div>
   );

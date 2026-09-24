@@ -20,6 +20,7 @@ import NowCard from '../components/NowCard.jsx';
 import { groupSettled as dosesSettled, afterDoseOpen, formatUntil } from '../lib/next.js';
 import { effectiveWindow } from '../lib/meds.js';
 import { mergeWater, glassesOnDay } from '../lib/water.js';
+import { okMeals } from '../lib/mealLibrary.js';
 import WindowTimeline from '../components/WindowTimeline.jsx';
 import QuietRow from '../components/QuietRow.jsx';
 import InstallCard from '../components/InstallCard.jsx';
@@ -55,7 +56,7 @@ export default function RxHome() {
     logCrashDose, skipCrashDose, unlogCrashDose, addCrashDose, updateCrashDose,
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
-    rxNotes, addRxNote, rxEffects, addEffect,
+    rxNotes, addRxNote, rxEffects, addEffect, rxMeals,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
@@ -129,8 +130,10 @@ export default function RxHome() {
     return e.expectedAt ?? shiftDay(day, 0) + 12 * 60 * 60 * 1000;
   };
 
-  const take = (e, at) => {
-    logCrashDose(e.medId, at ?? loggedAt(e), { slotId: e.slotId, amount: e.amount });
+  const take = (e, at, meal) => {
+    logCrashDose(e.medId, at ?? loggedAt(e), {
+      slotId: e.slotId, amount: e.amount, ...(meal ? { meal } : {}),
+    });
     setOpenKey(null);
   };
   const skip = (e) => {
@@ -191,7 +194,11 @@ export default function RxHome() {
               doses={crashDoses}
               runs={rxRoutineRuns}
               kit={kit}
-              onStep={(entry, stepId) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now())}
+              savedMeals={rxMeals}
+              onStep={(entry, stepId, ate) => (
+                // null clears any "ate instead" from an earlier tap.
+                checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now(), ate ?? null)
+              )}
               onOpenDose={(key) => setOpenKey(key)}
               onCrash={() => navigate('/crash')}
               onCheckIn={() => checkInCrash()}
@@ -282,9 +289,11 @@ export default function RxHome() {
                 display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'left',
               }}
             >
-              <Check size={16} style={{ color: 'var(--positive)', flexShrink: 0 }} />
+              {taken > 0
+                ? <Check size={16} style={{ color: 'var(--positive)', flexShrink: 0 }} />
+                : <X size={16} style={{ color: 'var(--danger)', flexShrink: 0 }} />}
               <span style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text)' }}>
-                {taken} of {entries.length} done earlier
+                {taken} of {entries.length} taken earlier
                 <span style={{ fontWeight: 400, color: 'var(--subtle)' }}>
                   {' · '}{entries.map((e) => (e.dose ? formatClock(e.dose.takenAt) : e.state === 'skipped' ? 'missed' : 'skipped')).join(', ')}
                 </span>
@@ -318,18 +327,10 @@ export default function RxHome() {
                           routine={routine}
                           when={when}
                           onToggleStep={(stepId, at) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, at)}
-                          onAte={(stepId, text) => setRoutineAte(day, entry.medId, entry.slotId, stepId, text)}
-                          onTake={() => take(entry)}
                           onOpenDose={() => setOpenKey(entry.key)}
                         />
                       )}
-                      <ScheduleRow
-                        entry={entry}
-                        now={now}
-                        onOpen={(e) => setOpenKey(e.key)}
-                        onNotes={(med) => setNotesFor(med.id)}
-                        noteCount={noteCount(entry.med)}
-                      />
+                      <ScheduleRow entry={entry} now={now} onOpen={(e) => setOpenKey(e.key)} />
                     </div>
                   );
                 })}
@@ -453,6 +454,7 @@ export default function RxHome() {
           entry={openEntry}
           when={when}
           routineNote={routineNote(routines.get(openEntry.key), Date.now())}
+          meals={okMeals(rxMeals)}
           onClose={() => setOpenKey(null)}
           onTake={take}
           onSkip={skip}
@@ -460,6 +462,8 @@ export default function RxHome() {
           onChangeTime={(dose) => { setOpenKey(null); setEditingDose(dose.id); }}
           onOpenMed={(medId) => navigate(`/meds/${medId}`)}
           onCheckIn={isToday ? (medId) => { setOpenKey(null); setManualCheckIn(medId); } : null}
+          onNotes={(med) => { setOpenKey(null); setNotesFor(med.id); }}
+          noteCount={noteCount(openEntry.med)}
         />
       )}
 
@@ -778,4 +782,3 @@ function GlanceTiles({ water, glasses, onWater, window: w, score, now, open, onT
     </div>
   );
 }
-
