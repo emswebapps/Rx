@@ -4,6 +4,7 @@ import { formatClock } from '../lib/time.js';
 import { expectedDosesOnDay, effectiveWindow } from '../lib/meds.js';
 import { routinesForDay, formatCountdown } from '../lib/routine.js';
 import { nextUp, formatUntil } from '../lib/next.js';
+import { mealsForDay } from '../lib/mealPlan.js';
 
 /**
  * The top of Today: one thing, with its clock.
@@ -12,11 +13,12 @@ import { nextUp, formatUntil } from '../lib/next.js';
  * minute-old view, so a wait that runs out flips straight to "take it now"
  * instead of sitting at 0:00 for the rest of the minute.
  */
-export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, onCrash, onCheckIn }) {
+export default function NowCard({ meds, doses, runs, kit, eaten, onStep, onOpenDose, onCrash, onCheckIn, onMealAte }) {
   const now = useNow({ tick: 1000 });
   const schedule = expectedDosesOnDay(meds, doses, now, now);
   const routines = routinesForDay(schedule, runs, now, now);
-  const next = nextUp({ schedule, routines, window: effectiveWindow(meds, doses, kit, now), now });
+  const meals = mealsForDay({ plan: kit.mealPlan, eaten, runs, meds, doses, kit, dayTs: now, now });
+  const next = nextUp({ schedule, routines, window: effectiveWindow(meds, doses, kit, now), meals, now });
   const name = (e) => e?.med?.name || 'your dose';
 
   if (next.kind === 'wait') {
@@ -42,6 +44,19 @@ export default function NowCard({ meds, doses, runs, kit, onStep, onOpenDose, on
         <Big small>{next.step.text}</Big>
         <Action onClick={() => onStep(next.entry, next.step.id)}>
           <Check size={18} strokeWidth={3} /> {meal ? (next.afterDose || next.routine.steps[next.routine.steps.indexOf(next.step) + 1]?.kind !== 'wait' ? 'Ate it' : 'Ate it — start the timer') : 'Done'}
+        </Action>
+      </Shell>
+    );
+  }
+
+  if (next.kind === 'meal') {
+    const { meal } = next;
+    return (
+      <Shell tone="accent" label={`TIME TO EAT · ${meal.meal.name}`} Icon={Utensils}>
+        <Big small>{meal.food || meal.meal.name}</Big>
+        <Sub>Due {formatClock(meal.dueAt)}</Sub>
+        <Action onClick={() => onMealAte(meal.id)}>
+          <Check size={18} strokeWidth={3} /> Ate it
         </Action>
       </Shell>
     );

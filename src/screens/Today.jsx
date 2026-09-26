@@ -28,6 +28,10 @@ import { formatRunOut } from '../components/medsUi.jsx';
 import RoutineCard from '../components/RoutineCard.jsx';
 import WaterRow from '../components/WaterRow.jsx';
 import ComplianceCard from '../components/ComplianceRing.jsx';
+import MealTimesCard from '../components/MealTimesCard.jsx';
+import OnsetRow from '../components/OnsetRow.jsx';
+import { mealsForDay, routineMealsOnDay } from '../lib/mealPlan.js';
+import { onsetPrompt } from '../lib/onset.js';
 
 const DAY_LETTERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -56,6 +60,7 @@ export default function RxHome() {
     crashBehaviors, checkInCrash,
     rxRoutineRuns, checkRoutineStep, setRoutineAte, rxWater, addWater, undoWater,
     rxNotes, addRxNote, rxEffects, addEffect,
+    rxEaten, markPlanMeal, unmarkPlanMeal,
   } = useApp();
   // A check-in started by hand from the dose sheet, for one medication.
   const [manualCheckIn, setManualCheckIn] = useState(null);
@@ -97,6 +102,13 @@ export default function RxHome() {
   const groupSettled = (entries) => dosesSettled(entries)
     && entries.every((e) => !afterDoseOpen(routines.get(e.key), now));
   const tracking = kit.doseTracking !== false;
+
+  // Meals on their own clock, and everything eaten today for the protein.
+  const mealRows = isToday
+    ? mealsForDay({ plan: kit.mealPlan, eaten: rxEaten, runs: rxRoutineRuns, meds: crashMeds, doses: crashDoses, kit, dayTs: day, now })
+    : [];
+  const routineMeals = isToday ? routineMealsOnDay(crashMeds, crashDoses, rxRoutineRuns, day) : [];
+  const onset = isToday ? onsetPrompt(crashMeds, crashDoses, now) : null;
 
   // The heading picked out in the accent: the first time still waiting on
   // something, which is the one to look at right now.
@@ -191,12 +203,27 @@ export default function RxHome() {
               doses={crashDoses}
               runs={rxRoutineRuns}
               kit={kit}
+              eaten={rxEaten}
+              onMealAte={(mealId) => markPlanMeal(day, mealId)}
               onStep={(entry, stepId) => checkRoutineStep(day, entry.medId, entry.slotId, stepId, Date.now())}
               onOpenDose={(key) => setOpenKey(key)}
               onCrash={() => navigate('/crash')}
               onCheckIn={() => checkInCrash()}
             />
           </div>
+        )}
+
+        {/* ── Kicked in? Dropping off? ──
+            One tap at the moment it's felt; History lines the minutes up
+            against what was eaten with the dose. */}
+        {isToday && tracking && (
+          <OnsetRow
+            prompt={onset}
+            now={now}
+            onKick={() => updateCrashDose(onset.dose.id, { kickedInAt: Date.now() })}
+            onDrop={() => updateCrashDose(onset.dose.id, { droppedAt: Date.now() })}
+            onUndoKick={() => updateCrashDose(onset.dose.id, { kickedInAt: null })}
+          />
         )}
 
         {/* ── Running out before the refill ──
@@ -350,6 +377,17 @@ export default function RxHome() {
             Nothing scheduled this day.
           </p>
         ))}
+
+        {isToday && tracking && (
+          <MealTimesCard
+            rows={mealRows}
+            routineMeals={routineMeals}
+            now={now}
+            onAte={(mealId, food) => markPlanMeal(day, mealId, food ? { food } : {})}
+            onSkip={(mealId) => markPlanMeal(day, mealId, { skipped: true })}
+            onUndo={(mealId) => unmarkPlanMeal(day, mealId)}
+          />
+        )}
 
         {isToday && (
           <>

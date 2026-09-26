@@ -8,6 +8,7 @@ import { normalizeMed, supplyAfterDose, supplyAfterUndo, newMed } from '../lib/m
 import { markStep, markAte, pruneRuns } from '../lib/routine.js';
 import { addGlass, removeLastGlass } from '../lib/water.js';
 import { saveMeal } from '../lib/mealLibrary.js';
+import { markMeal, unmarkMeal } from '../lib/mealPlan.js';
 import {
   registerFCMToken, onForegroundMessage, sendNotification, notificationPermission,
 } from '../utils/notifications';
@@ -69,6 +70,7 @@ export function AppProvider({ children, uid }) {
   const [rxClientSent, setClientSent] = useState(() => storage.getClientSent());
   const [rxEffects, setEffects] = useState(() => storage.getEffects());
   const [rxMeals, setMeals] = useState(() => storage.getMeals());
+  const [rxEaten, setEaten] = useState(() => storage.getEaten());
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('bt_fcm_token') || null);
   const [cloudLoaded, setCloudLoaded] = useState(false);
 
@@ -78,7 +80,7 @@ export function AppProvider({ children, uid }) {
   stateRef.current = {
     settings, notifPrefs, crashSessions, crashDrafts, crashAnchors,
     crashKit, crashDoses, crashMeds, crashBehaviors, rxNotes,
-    rxRoutineRuns, rxWater, rxClientSent, rxEffects, rxMeals,
+    rxRoutineRuns, rxWater, rxClientSent, rxEffects, rxMeals, rxEaten,
   };
 
   const setters = useRef({
@@ -97,6 +99,7 @@ export function AppProvider({ children, uid }) {
     rxClientSent: setClientSent,
     rxEffects: setEffects,
     rxMeals: setMeals,
+    rxEaten: setEaten,
   }).current;
 
   // ── Load, then keep listening ───────────────────────────────────────────
@@ -162,6 +165,7 @@ export function AppProvider({ children, uid }) {
       rxWater: st.rxWater,
       rxClientSent: st.rxClientSent,
       rxEffects: st.rxEffects,
+      rxEaten: st.rxEaten,
     });
   }, [uid]);
 
@@ -499,6 +503,22 @@ export function AppProvider({ children, uid }) {
     persist('rxMeals', stateRef.current.rxMeals.filter((m) => m.id !== id));
   }, [persist]);
 
+  // ── Meal times ──────────────────────────────────────────────────────────
+  // Flushed straight away, like a routine step: "Ate it" is the tap made
+  // just before the phone goes down, and the scheduler reads it to know not
+  // to buzz.
+
+  /** Eaten (with what, if not the plan) or skipped. */
+  const markPlanMeal = useCallback((dayTs, mealId, opts = {}) => {
+    const next = markMeal(stateRef.current.rxEaten, dayTs, mealId, { at: Date.now(), ...opts });
+    persist('rxEaten', next);
+    if (uid) saveUserData(uid, { rxEaten: next });
+  }, [persist, uid]);
+
+  const unmarkPlanMeal = useCallback((dayTs, mealId) => {
+    persist('rxEaten', unmarkMeal(stateRef.current.rxEaten, dayTs, mealId));
+  }, [persist]);
+
   // ── Pill counts ─────────────────────────────────────────────────────────
   // What was actually in the bottle against what the log says should be.
   // `apply` makes the physical count the new truth; either way the check is
@@ -557,6 +577,7 @@ export function AppProvider({ children, uid }) {
       rxClientSent, markClientSent,
       rxEffects, addEffect, deleteEffect, recordPillCount,
       rxMeals, saveRxMeal, deleteRxMeal,
+      rxEaten, markPlanMeal, unmarkPlanMeal,
       rxNotes, addRxNote, updateRxNote, deleteRxNote, toggleRxNotePin,
     }}>
       {children}

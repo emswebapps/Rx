@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 
-import { okMeals, avoidMeals, findMeal, avoidHits, saveMeal } from './mealLibrary.js';
+import {
+  okMeals, avoidMeals, findMeal, avoidHits, saveMeal, proteinFor, proteinTotal, grams,
+} from './mealLibrary.js';
 
 const LIST = [
   { id: '1', name: '2 eggs', status: 'ok' },
@@ -32,10 +34,35 @@ test('something on the avoid list is spotted inside what was typed', () => {
 test('saving adds a new meal, or updates the one with that name', () => {
   const added = saveMeal(LIST, { name: 'Greek yogurt' }, 'new', 100);
   assert.strictEqual(added.length, LIST.length + 1);
-  assert.deepStrictEqual(findMeal(added, 'greek yogurt'), { id: 'new', name: 'Greek yogurt', status: 'ok', note: '', createdAt: 100 });
+  assert.deepStrictEqual(findMeal(added, 'greek yogurt'), { id: 'new', name: 'Greek yogurt', status: 'ok', note: '', protein: null, createdAt: 100 });
 
   const moved = saveMeal(LIST, { name: '2 Eggs', status: 'avoid' }, 'ignored');
   assert.strictEqual(moved.length, LIST.length);
   assert.strictEqual(findMeal(moved, '2 eggs').status, 'avoid');
   assert.strictEqual(saveMeal(LIST, { name: '  ' }, 'x'), LIST);
+});
+
+test('protein comes from the list, for a whole meal or for all of its parts', () => {
+  const list = [
+    { id: 'a', name: '2 eggs + Ready bar', protein: 27 },
+    { id: 'b', name: 'Ranch pouch', protein: 17 },
+    { id: 'c', name: 'Crackers', protein: 2 },
+    { id: 'd', name: 'Jerky stick', protein: '7' },
+    { id: 'e', name: 'Toast' },
+  ];
+  assert.strictEqual(proteinFor(list, '2 Eggs + Ready Bar'), 27);
+  assert.strictEqual(proteinFor(list, 'Ranch pouch + crackers + jerky stick'), 26);
+  // One part with no number and the total isn't guessed at.
+  assert.strictEqual(proteinFor(list, 'Ranch pouch + toast'), null);
+  assert.strictEqual(proteinFor(list, 'Pizza'), null);
+  assert.deepStrictEqual(proteinTotal(list, ['2 eggs + Ready bar', 'Ranch pouch, crackers, jerky stick', 'Pizza']),
+    { grams: 53, known: 2, unknown: 1 });
+  assert.strictEqual(grams(''), null);
+  assert.strictEqual(grams('-3'), null);
+  assert.strictEqual(grams('26.55'), 26.6);
+});
+
+test('saving keeps the protein number', () => {
+  const list = saveMeal([], { name: 'Ranch pouch', protein: '17' }, 'x', 1);
+  assert.strictEqual(list[0].protein, 17);
 });

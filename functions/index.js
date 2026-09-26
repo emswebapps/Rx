@@ -306,6 +306,16 @@ function collectCrashMessages(data, sent, now, tz) {
     }
   }
 
+  // ── A meal on the meal times has come due ──
+  // Counted from what actually happened today — the last meal, the first
+  // dose, or the last dose wearing off — so a late breakfast moves lunch.
+  // Never while the time is only a projection off a dose still to come.
+  if (tracking && prefs.mealTime !== false) {
+    for (const tag of daily.dueMealTags(kit, data.rxEaten, meds, doses, data.rxRoutineRuns, now, tz)) {
+      push(tag, 'Time to eat', 'Your next meal is up. Tap to log it.');
+    }
+  }
+
   // ── Running out before the refill date ──
   // Counted dose by dose from what's in hand. Said the moment it becomes true
   // — that's when there's most time to get it sorted — and once more three

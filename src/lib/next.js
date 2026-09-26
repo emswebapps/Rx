@@ -7,6 +7,7 @@
 //
 //   1. a wait that's counting down        → the countdown
 //   2. a routine step that's up next      → that step, one tap to check off
+//      (or a meal on your meal times that's come due)
 //   3. the next dose due                  → how long until it
 //   4. nothing left today, crash ahead    → how long until the window
 //   5. nothing at all                     → done for the day
@@ -33,9 +34,9 @@ export function afterDoseOpen(r, now = Date.now()) {
 
 /**
  * `schedule` is expectedDosesOnDay for today; `routines` is routinesForDay
- * over it; `window` is effectiveWindow (or null).
+ * over it; `window` is effectiveWindow (or null); `meals` is mealsForDay.
  */
-export function nextUp({ schedule = [], routines = [], window = null, now = Date.now() }) {
+export function nextUp({ schedule = [], routines = [], window = null, meals = [], now = Date.now() }) {
   // 1. A wait running anywhere wins — it's the only thing with a hard edge.
   for (const r of routines) {
     const i = r.steps.findIndex((s) => s.state === 'waiting');
@@ -54,6 +55,11 @@ export function nextUp({ schedule = [], routines = [], window = null, now = Date
       return { kind: 'step', key: r.key, entry: r.entry, step: r.current, routine: r, afterDose: true };
     }
   }
+
+  // 2b. A meal on your meal times that's come due. It has its own clock, so
+  // it doesn't wait for a dose to be close.
+  const meal = meals.find((m) => m.state === 'due');
+  if (meal) return { kind: 'meal', meal };
 
   const open = schedule
     .filter((e) => (e.state === 'due' || e.state === 'upcoming') && e.expectedAt != null)

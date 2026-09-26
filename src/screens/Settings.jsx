@@ -237,9 +237,12 @@ export default function SettingsView() {
           }}
         >
           <span style={{ flex: 1 }}>
-            Meals that work with my dose
+            Meal times, and meals that work with my dose
             <span style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 400, color: 'var(--subtle)' }}>
-              {(app.rxMeals || []).length ? `${app.rxMeals.length} saved` : 'Save them once, pick them every day'}
+              {[
+                (crashKit?.mealPlan?.meals || []).length ? `${crashKit.mealPlan.meals.length} meal times` : null,
+                (app.rxMeals || []).length ? `${app.rxMeals.length} saved` : null,
+              ].filter(Boolean).join(' · ') || 'Save them once, pick them every day'}
             </span>
           </span>
           <ChevronRight size={18} style={{ color: 'var(--muted)' }} />
@@ -392,6 +395,12 @@ export default function SettingsView() {
             onChange={(v) => setCrashPref('water', v)}
             label="Water reminders"
             hint="Every interval after your first dose, until the goal or the cutoff. Tap “Drank one” to log it from the lock screen."
+          />
+          <Toggle
+            checked={notifPrefs.crash?.mealTime ?? true}
+            onChange={(v) => setCrashPref('mealTime', v)}
+            label="Meal times"
+            hint="When a meal on My meals → Meal times comes due. One that hangs off a dose still to come waits until that dose is in."
           />
           <Toggle
             checked={notifPrefs.crash?.effectCheckIn ?? true}
